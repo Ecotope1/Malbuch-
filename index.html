@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Malbuch">
+<meta name="theme-color" content="#3554a6">
+<title>Zaubermalbuch</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+html.standalone .fsBtn{display:none}
+/* Layout: Startseite mit Bildergalerie pro Thema; Malansicht = ein großes Blatt, Riesen-Tasten außenrum */
+:root{
+  --bg:#3554a6;
+  --bg-dot:#2e4b98;
+  --bg-deep:#233a7a;
+  --paper:#ffffff;
+  --sun:#ffc83d;
+  --sun-deep:#e3a400;
+  --ink:#1f2b55;
+  --light:#ffffff;
+  --muted:#cdd8ff;
+  --display:"Baloo 2", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{
+  margin:0;
+  background:radial-gradient(circle, var(--bg-dot) 2px, transparent 2.6px) 0 0 / 28px 28px, var(--bg);
+  color:var(--light);
+  font-family:var(--display);
+  overflow:hidden;
+  touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.view{height:100%;display:flex;flex-direction:column}
+
+/* Startseite */
+#home{overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding-block:24px 48px;gap:28px}
+#home header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#home header > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+#home h1{margin:0;font-weight:800;font-size:clamp(36px,6vw,64px);line-height:1;letter-spacing:-.01em;text-wrap:balance}
+#home h1 span{color:var(--sun)}
+#home header p{margin:0;font-size:clamp(16px,2.2vw,22px);color:var(--muted);font-weight:600;max-width:46ch}
+section{display:flex;flex-direction:column;gap:12px}
+h2{margin:0;font-size:clamp(22px,3vw,30px);font-weight:800;display:flex;align-items:center;gap:10px}
+h2 i{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--sun)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+@media (max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.thumb{appearance:none;border:0;padding:0;margin:0;background:var(--paper);border-radius:22px;box-shadow:0 7px 0 var(--bg-deep);aspect-ratio:4/3;max-width:100%;overflow:hidden;position:relative;cursor:pointer;font:inherit;transition:transform .08s}
+.thumb:active{transform:translateY(5px);box-shadow:0 2px 0 var(--bg-deep)}
+.thumb:focus-visible,.btn:focus-visible{outline:4px solid var(--sun);outline-offset:4px}
+.thumb canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.thumb .label{position:absolute;left:10px;bottom:9px;background:var(--sun);color:var(--ink);border-radius:999px;padding:1px 12px 0;font-weight:800;font-size:clamp(13px,1.8vw,17px)}
+.thumb .star{position:absolute;right:9px;top:9px;width:38px;height:38px;color:var(--sun);filter:drop-shadow(0 2px 0 var(--sun-deep))}
+
+/* Malansicht */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
+.bar .side{display:flex;gap:14px}
+.name{font-size:clamp(24px,3.4vw,36px);font-weight:800;text-align:center;min-width:0;line-height:1;flex:1}
+.btn{appearance:none;border:0;width:78px;height:78px;flex:none;border-radius:50%;background:var(--sun);box-shadow:0 7px 0 var(--sun-deep);display:grid;place-items:center;color:var(--ink);position:relative;cursor:pointer;touch-action:manipulation;transition:transform .08s}
+.btn.small{width:62px;height:62px}
+.btn.small svg.ic{width:32px;height:32px}
+.btn:active{transform:translateY(5px);box-shadow:0 2px 0 var(--sun-deep)}
+.btn svg.ic{width:40px;height:40px}
+.btn .ring{position:absolute;inset:-7px;width:calc(100% + 14px);height:calc(100% + 14px);transform:rotate(-90deg);pointer-events:none}
+.btn .ring circle{fill:none;stroke:var(--light);stroke-width:6;stroke-linecap:round;stroke-dasharray:283;stroke-dashoffset:283}
+.btn.holding .ring circle{stroke-dashoffset:0;transition:stroke-dashoffset .9s linear}
+.fs-on .i-enter,.i-exit{display:none}
+.fs-on .i-exit{display:block}
+.stage{flex:1;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr);align-items:center;gap:16px;padding-block:6px 18px}
+.wrap{height:100%;min-width:0;min-height:0;display:grid;place-items:center}
+#sheet{position:relative;background:var(--paper);border-radius:24px;overflow:hidden;box-shadow:0 10px 0 var(--bg-deep);max-width:100%}
+#sheet canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#lc{pointer-events:none}
+#pc{touch-action:none}
+@media (orientation:portrait){
+  .stage{grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"w w" "p n"}
+  .wrap{grid-area:w}
+  #prev{grid-area:p;justify-self:start}
+  #next{grid-area:n;justify-self:end}
+}
+.pulse{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none;outline:5px solid var(--light)}}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
+
+/* Hinweis, wenn Vollbild gesperrt ist */
+.overlay{position:fixed;inset:0;z-index:30;background:rgba(20,30,70,.6);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));touch-action:pan-y}
+.card{background:var(--paper);color:var(--ink);border-radius:24px;padding:24px 26px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 0 var(--bg-deep)}
+.card h3{margin:0;font-size:28px;line-height:1.1;text-wrap:balance}
+.card p,.card li{margin:0;font-size:18px;line-height:1.4;font-weight:600}
+.card ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+.card .ok{align-self:flex-end;appearance:none;border:0;background:var(--sun);color:var(--ink);font:inherit;font-weight:800;font-size:20px;border-radius:999px;padding:8px 26px 6px;box-shadow:0 5px 0 var(--sun-deep);cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div id="home" class="view">
+  <header>
+    <div>
+      <h1>Zauber<span>malbuch</span></h1>
+      <p>Bild antippen, dann einfach drauflos kritzeln. Die Farbe kommt von allein.</p>
+    </div>
+    <button class="btn fsBtn" aria-label="Vollbild">
+      <svg class="ic i-enter" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 15 V6 H15 M25 6 H34 V15 M34 25 V34 H25 M15 34 H6 V25"/></svg>
+      <svg class="ic i-exit" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M15 6 V15 H6 M34 15 H25 V6 M25 34 V25 H34 M6 25 H15 V34"/></svg>
+    </button>
+  </header>
+  <section><h2><i></i>Dinos</h2><div class="grid" data-cat="dino"></div></section>
+  <section><h2><i></i>Meerestiere</h2><div class="grid" data-cat="meer"></div></section>
+  <section><h2><i></i>Vulkane &amp; Natur</h2><div class="grid" data-cat="natur"></div></section>
+  <section><h2><i></i>Flugzeuge &amp; Hubschrauber</h2><div class="grid" data-cat="flug"></div></section>
+  <section><h2><i></i>Polizei &amp; Feuerwehr</h2><div class="grid" data-cat="blau"></div></section>
+  <section><h2><i></i>Bauernhof</h2><div class="grid" data-cat="hof"></div></section>
+</div>
+
+<div id="paint" class="view" hidden>
+  <div class="bar">
+    <div class="side">
+      <button class="btn" id="homeBtn" aria-label="Zur Bilderauswahl">
+        <svg class="ic" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 19 L20 7 L34 19"/><path d="M10 16 V33 H30 V16"/><path d="M17 33 V24 H23 V33"/></svg>
+      </button>
+      <button class="btn small fsBtn" aria-label="Vollbild">
+        <svg class="ic i-enter" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 15 V6 H15 M25 6 H34 V15 M34 25 V34 H25 M15 34 H6 V25"/></svg>
+        <svg class="ic i-exit" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M15 6 V15 H6 M34 15 H25 V6 M25 34 V25 H34 M6 25 H15 V34"/></svg>
+      </button>
+    </div>
+    <div class="name" id="name"></div>
+    <button class="btn" id="clearBtn" aria-label="Gedrückt halten zum Neu-Anfangen">
+      <svg class="ic" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M31 20 A11 11 0 1 1 26 10.5"/><path d="M27 4 L27 11 L20 11"/></svg>
+      <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/></svg>
+    </button>
+  </div>
+  <div class="stage">
+    <button class="btn" id="prev" aria-label="Bild zurück">
+      <svg class="ic" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"><path d="M25 8 L13 20 L25 32"/></svg>
+    </button>
+    <div class="wrap" id="wrap">
+      <div id="sheet"><canvas id="pc" width="1600" height="1200"></canvas><canvas id="lc" width="1600" height="1200"></canvas></div>
+    </div>
+    <button class="btn" id="next" aria-label="Nächstes Bild">
+      <svg class="ic" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"><path d="M15 8 L27 20 L15 32"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="fsHelp" class="overlay" hidden>
+  <div class="card" role="dialog" aria-labelledby="fsTitle">
+    <h3 id="fsTitle">Als App installieren</h3>
+    <p>Safari erlaubt hier kein Vollbild. So startet das Malbuch immer im Vollbild:</p>
+    <ol>
+      <li>In Safari auf Teilen tippen.</li>
+      <li>„Zum Home-Bildschirm“ wählen.</li>
+      <li>Das Malbuch ab jetzt über das neue Symbol starten.</li>
+    </ol>
+    <p>Damit er nicht aus der App wischen kann: Einstellungen → Bedienungshilfen → Geführter Zugriff einschalten, dann dreimal die obere Taste drücken.</p>
+    <button class="ok" id="fsOk">Verstanden</button>
+  </div>
+</div>
+
+<canvas id="fx"></canvas>
+
+<script>
+(function(){
+"use strict";
+const W=1600,H=1200,TW=480,TH=360,BRUSH=84,LINE="#1d1a26";
+
+/* ---------- Bausteine ---------- */
+const sky=c=>`<rect class="f" x="-20" y="-20" width="840" height="640" fill="${c}"/><rect class="s" x="-20" y="-20" width="840" height="640" fill="url(#dots)"/>`;
+const PF=(d,f)=>`<path class="f" d="${d}" fill="${f}"/>`;
+const ground=(c,y=450)=>PF(`M-20 ${y} Q200 ${y-40} 400 ${y} T820 ${y-10} V620 H-20 Z`,c);
+const sea=(c,y)=>PF(`M-20 ${y} Q100 ${y-20} 200 ${y} T400 ${y} T600 ${y} T820 ${y} V620 H-20 Z`,c);
+const sand=(y=510,c="#ffe082")=>PF(`M-20 ${y} Q200 ${y-28} 400 ${y} T820 ${y-5} V620 H-20 Z`,c);
+const rays=()=>`<path class="s" d="M250 -20 L340 -20 L190 620 L90 620 Z" fill="#ffffff" fill-opacity=".16"/><path class="s" d="M520 -20 L580 -20 L520 620 L440 620 Z" fill="#ffffff" fill-opacity=".12"/>`;
+const sun=(x,y)=>`<circle cx="${x}" cy="${y}" r="50" fill="#ffd23f"/>`+N(`M${x} ${y-62} v-20 M${x+44} ${y-44} l14 -14 M${x+62} ${y} h20 M${x-44} ${y-44} l-14 -14 M${x-62} ${y} h-20 M${x+44} ${y+44} l14 14 M${x-44} ${y+44} l-14 14`);
+const cloud=(x,y)=>`<path d="M${x} ${y} a30 30 0 0 1 30 -32 a40 40 0 0 1 70 -12 a32 32 0 0 1 50 26 a24 24 0 0 1 -4 48 h-122 a22 22 0 0 1 -24 -30 z" fill="#f4fbff"/>`;
+const C=(x,y,r,f)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}"/>`;
+const E=(x,y,rx,ry,f)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}"/>`;
+const R=(x,y,w,h,rx,f)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}"/>`;
+const P=(d,f)=>`<path d="${d}" fill="${f}"/>`;
+const N=d=>`<path class="n" d="${d}" fill="none"/>`;
+const K=(x,y,rx,ry)=>`<ellipse class="k" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${LINE}"/>`;
+const G=(x,y,s,inner,flip=1)=>`<g transform="translate(${x} ${y}) scale(${s*flip} ${s})" stroke-width="${(8/s).toFixed(2)}">${inner}</g>`;
+const eye=(x,y,r)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff"/><circle class="k" cx="${x+r*.18}" cy="${y+r*.05}" r="${r*.58}" fill="${LINE}"/><circle class="h" cx="${x+r*.38}" cy="${y-r*.22}" r="${r*.22}" fill="#ffffff"/><circle class="h" cx="${x-r*.05}" cy="${y+r*.3}" r="${r*.1}" fill="#ffffff"/>`;
+const bub=(x,y,r)=>C(x,y,r,"#e1f5fe");
+const flower=(x,y,c="#f48fb1")=>[[0,-16],[15,-5],[9,13],[-9,13],[-15,-5]].map(([a,b])=>C(x+a,y+b,12,c)).join("")+C(x,y,9,"#ffeb3b");
+const weed=(x,f="#43a047")=>P(`M${x} 515 Q${x-30} 440 ${x+10} 380 Q${x+40} 320 ${x+10} 260 Q${x+60} 320 ${x+35} 390 Q${x+10} 450 ${x+40} 515 Z`,f);
+const tuft=(x,y)=>N(`M${x} ${y} l-8 -18 M${x} ${y} l1 -22 M${x} ${y} l10 -16`);
+const bird=(x,y)=>N(`M${x-18} ${y} q9 -12 18 0 q9 -12 18 0`);
+const bush=(x,y,c="#66bb6a")=>C(x,y,30,c)+C(x+76,y,30,c)+C(x+38,y-18,36,c);
+const rock=(x,y,w,c="#b0bec5")=>P(`M${x} ${y} Q${x+w*.1} ${y-w*.6} ${x+w*.5} ${y-w*.6} Q${x+w} ${y-w*.55} ${x+w} ${y} Z`,c);
+const butterfly=(x,y,c)=>E(x-18,y-12,18,14,c)+E(x+18,y-12,18,14,c)+E(x-14,y+10,12,10,c)+E(x+14,y+10,12,10,c)+E(x,y,5,18,"#5d4037")+N(`M${x-3} ${y-17} q-6 -14 -14 -16 M${x+3} ${y-17} q6 -14 14 -16`);
+const egg=(x,y,c="#fff3e0")=>E(x,y,20,26,c)+C(x-6,y-6,4,"#ffcc80")+C(x+6,y+9,5,"#ffcc80");
+const nail=(x,y)=>E(x,y,7,5,"#fff8e1");
+const claw=(x,y)=>P(`M${x} ${y} l16 -3 l-6 12 Z`,"#fff8e1");
+const tooth=(x,y)=>P(`M${x} ${y} l6 13 l6 -13 Z`,"#ffffff");
+const fishS=(x,y,c,flip=1,s=1)=>G(x,y,s,P("M-36 0 L-62 -20 L-62 20 Z",c)+E(0,0,42,24,c)+N("M-8 -18 Q2 0 -8 18")+K(22,-5,6,6),flip);
+const starP=(x,y,s,c="#ffb300")=>G(x,y,s,P("M0 -40 L12 -12 L42 -10 L18 8 L26 38 L0 20 L-26 38 L-18 8 L-42 -10 L-12 -12 Z",c));
+const shell=(x,y,c="#f8bbd0")=>P(`M${x-35} ${y} Q${x} ${y-72} ${x+35} ${y} Z`,c)+N(`M${x} ${y} L${x} ${y-36} M${x} ${y} L${x-18} ${y-28} M${x} ${y} L${x+18} ${y-28}`);
+const coral=(x,y,c)=>P(`M${x} ${y} L${x-6} ${y-50} Q${x-30} ${y-70} ${x-28} ${y-100} L${x-12} ${y-100} Q${x-12} ${y-78} ${x+2} ${y-68} L${x+4} ${y-125} L${x+22} ${y-125} L${x+20} ${y-72} Q${x+34} ${y-80} ${x+36} ${y-106} L${x+52} ${y-106} Q${x+52} ${y-64} ${x+22} ${y-46} L${x+24} ${y} Z`,c);
+const wave=(x,y)=>N(`M${x} ${y} q15 -12 30 0 t30 0`);
+const pebbles=(x,y)=>E(x,y,10,6,"#bcaaa4")+E(x+22,y+6,7,5,"#d7ccc8");
+const treads=(cx,cy,r,n)=>Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2;return C((cx+Math.cos(a)*r).toFixed(1),(cy+Math.sin(a)*r).toFixed(1),11,"#424242");}).join("");
+const frillBumps=[-175,-145,-115,-85,-55,-25,5].map(a=>{const t=a*Math.PI/180;return C((560+85*Math.cos(t)).toFixed(1),(290+105*Math.sin(t)).toFixed(1),19,"#ffcc80");}).join("");
+const apple=(x,y)=>C(x,y,10,"#e53935");
+const drop=(x,y,c="#81d4fa")=>P(`M${x} ${y-18} Q${x+13} ${y+2} ${x} ${y+8} Q${x-13} ${y+2} ${x} ${y-18} Z`,c);
+const leaf=(x,y)=>P(`M${x} ${y} q14 -14 28 0 q-14 14 -28 0 Z`,"#8bc34a");
+const mush=(x,y)=>R(x-7,y-28,14,28,5,"#fff3e0")+P(`M${x-26} ${y-24} Q${x} ${y-62} ${x+26} ${y-24} Z`,"#e53935")+C(x-8,y-36,4,"#ffffff")+C(x+9,y-40,4,"#ffffff");
+const palm=(x,y)=>{const tx=x+20,ty=y-200;return P(`M${x-10} ${y} Q${x-20} ${y-110} ${x+10} ${ty} L${x+30} ${ty+4} Q${x+5} ${y-110} ${x+16} ${y} Z`,"#a1887f")+
+  N(`M${x-12} ${y-40} h24 M${x-10} ${y-90} h24 M${x-4} ${y-140} h24`)+
+  P(`M${tx} ${ty} Q${tx-60} ${ty-60} ${tx-120} ${ty-20} Q${tx-55} ${ty} ${tx} ${ty} Z`,"#43a047")+
+  P(`M${tx} ${ty} Q${tx+60} ${ty-60} ${tx+120} ${ty-20} Q${tx+55} ${ty} ${tx} ${ty} Z`,"#43a047")+
+  P(`M${tx} ${ty} Q${tx-60} ${ty+15} ${tx-80} ${ty+75} Q${tx-25} ${ty+50} ${tx} ${ty} Z`,"#66bb6a")+
+  P(`M${tx} ${ty} Q${tx+60} ${ty+15} ${tx+80} ${ty+75} Q${tx+25} ${ty+50} ${tx} ${ty} Z`,"#66bb6a")+
+  C(tx-10,ty+12,11,"#8d6e63")+C(tx+12,ty+14,11,"#8d6e63");};
+const bldg=(x,y,w,h,c)=>{let s=R(x,y-h,w,h,4,c);for(let yy=y-h+16;yy<y-30;yy+=36)for(let xx=x+12;xx<x+w-24;xx+=30)s+=R(xx,yy,16,20,3,"#fff59d");return s;};
+const wheel=(cx,cy,r)=>C(cx,cy,r,"#37474f")+C(cx,cy,r*.55,"#cfd8dc")+C(cx,cy,r*.2,"#78909c");
+const siren=(x,y,w=80)=>N(`M${x-14} ${y-6} l-16 -10 M${x+w+14} ${y-6} l16 -10 M${x+w/2} ${y-14} v-20`)+R(x,y,w,24,8,"#2196f3")+R(x+w/2-6,y,12,24,0,"#e3f2fd");
+const flame=(x,y)=>P(`M${x} ${y} Q${x-32} ${y-40} ${x-10} ${y-82} Q${x} ${y-52} ${x+12} ${y-62} Q${x+10} ${y-102} ${x+36} ${y-122} Q${x+40} ${y-72} ${x+52} ${y-52} Q${x+64} ${y-30} ${x+42} ${y} Z`,"#ff7043")+
+  P(`M${x+10} ${y} Q${x-4} ${y-26} ${x+12} ${y-48} Q${x+20} ${y-30} ${x+28} ${y-40} Q${x+42} ${y-22} ${x+32} ${y} Z`,"#ffeb3b");
+const speed=(x,y)=>N(`M${x} ${y} h70 M${x+20} ${y+34} h55 M${x-10} ${y+66} h45`);
+const heli=(b,a,win="#b3e5fc")=>
+  P("M270 280 L95 262 L95 292 L270 322 Z",b)+
+  P("M95 222 L62 222 L72 302 L108 302 Z",a)+
+  C(84,236,26,"#e0e0e0")+N("M84 212 V260 M60 236 H108")+
+  R(390,180,20,32,4,"#616161")+
+  P("M260 300 Q260 220 360 210 L460 210 Q542 215 562 290 Q562 362 480 372 L340 372 Q260 366 260 300 Z",b)+
+  P("M470 222 Q538 232 550 290 L470 290 Z",win)+
+  R(330,240,110,58,14,win)+
+  P("M262 322 Q300 342 560 330 L552 352 Q300 362 272 344 Z",a)+
+  R(340,372,10,40,4,"#616161")+R(470,372,10,40,4,"#616161")+
+  R(300,408,240,13,6,"#616161")+
+  R(150,165,500,16,8,"#455a64")+C(400,173,15,"#9e9e9e")+
+  N("M130 140 Q400 112 670 140 M180 120 Q400 98 620 120");
+const truck=()=>
+  R(110,226,380,10,4,"#bdbdbd")+R(110,250,380,10,4,"#bdbdbd")+
+  N(Array.from({length:12},(_,i)=>`M${130+i*30} 236 V250`).join(" "))+
+  R(110,270,400,165,14,"#e53935")+
+  R(130,295,170,90,10,"#ef9a9a")+N("M130 318 H300 M130 341 H300 M130 364 H300")+
+  C(400,340,42,"#ffca28")+C(400,340,16,"#ff8f00")+
+  P("M510 435 L510 260 Q510 245 525 245 L620 245 Q660 245 680 290 L705 345 Q715 360 715 380 L715 420 Q715 435 700 435 Z","#e53935")+
+  P("M528 262 L615 262 Q645 262 660 300 L680 345 L528 345 Z","#b3e5fc")+
+  N("M590 355 V430")+R(540,365,26,8,4,"#e0e0e0")+
+  siren(545,221,70)+
+  R(110,408,605,18,4,"#ffeb3b")+
+  R(690,365,22,24,6,"#fff59d")+R(695,425,35,18,6,"#9e9e9e")+
+  wheel(200,440,48)+wheel(340,440,48)+wheel(610,440,48);
+
+/* ---------- Bilder (800 x 600) ---------- */
+const spots=(()=>{let s="";[258,290,322].forEach((y,j)=>{for(let x=270+(j%2)*25;x<=630;x+=50)s+=C(x,y,8,"#e3f2fd");});return s;})();
+const rainDrops=[[90,200],[180,260],[60,330],[420,180],[480,260],[380,320],[700,200],[760,250],[540,350],[230,330],[330,250],[620,300]].map(([x,y])=>drop(x,y)).join("");
+
+const scenes=[
+/* ===== DINOS ===== */
+{id:"rex",cat:"dino",name:"T-Rex",svg:
+ sky("#9fdcf7")+sun(690,95)+cloud(70,110)+
+ P("M30 455 L150 225 Q175 205 200 225 L330 455 Z","#a1887f")+
+ P("M150 225 Q175 205 200 225 L188 262 L175 245 L162 262 Z","#ff7043")+
+ P("M166 255 Q156 300 170 330 Q186 300 182 255 Z","#ff7043")+
+ ground("#9ccc65")+bush(-10,490)+
+ tuft(250,560)+tuft(560,470)+tuft(40,580)+
+ P("M598 505 Q690 470 782 505 Q700 520 598 505 Z","#a1887f")+
+ egg(650,490)+egg(735,488,"#e1f5fe")+egg(692,478,"#fff9c4")+
+ P("M595 505 Q690 562 785 505 Q780 548 690 556 Q600 548 595 505 Z","#8d6e63")+
+ N("M620 528 Q690 545 760 528")+
+ P("M180 452 L190 420 L212 444 Z","#81c784")+P("M245 425 L262 392 L278 418 Z","#81c784")+
+ P("M110 480 Q250 440 320 330 L380 430 Q250 485 110 480 Z","#4caf50")+
+ P("M312 307 L330 262 L350 303 Z","#81c784")+P("M362 286 L380 238 L400 284 Z","#81c784")+
+ P("M412 282 L432 232 L452 282 Z","#81c784")+P("M462 290 L483 245 L500 296 Z","#81c784")+
+ P("M495 268 L480 236 L515 250 Z","#81c784")+P("M518 236 L510 202 L540 220 Z","#81c784")+
+ P("M470 400 L478 522 L535 522 L520 400 Z","#43a047")+claw(522,520)+claw(508,522)+
+ E(420,360,130,90,"#4caf50")+E(480,378,45,55,"#c5e1a5")+
+ N("M447 345 Q480 352 513 345 M442 372 Q480 380 520 372 M446 400 Q480 407 515 400")+
+ C(370,315,16,"#388e3c")+C(325,365,12,"#388e3c")+C(420,293,10,"#388e3c")+C(355,395,10,"#388e3c")+
+ P("M490 320 Q505 250 540 215 L600 245 Q570 300 560 360 Z","#4caf50")+
+ P("M520 185 Q528 132 600 132 L680 142 Q722 152 716 192 L712 216 Q702 238 670 238 L600 242 Q545 246 524 222 Z","#4caf50")+
+ tooth(640,219)+tooth(658,221)+tooth(676,220)+tooth(694,216)+
+ eye(605,172,18)+N("M630 218 Q665 226 702 214")+K(700,165,4,4)+N("M582 146 Q605 136 628 148")+
+ C(560,205,8,"#388e3c")+C(655,190,6,"#388e3c")+
+ P("M535 325 Q585 322 595 352 L578 360 Q566 342 532 348 Z","#4caf50")+claw(590,352)+
+ P("M345 430 L338 527 L420 527 L405 440 Z","#4caf50")+claw(410,524)+claw(396,527)+claw(382,527)+
+ E(380,410,58,55,"#4caf50")+C(385,400,12,"#388e3c")},
+
+{id:"ptero",cat:"dino",name:"Pterodactylus",svg:
+ sky("#9fdcf7")+sun(110,90)+cloud(560,80)+cloud(250,150)+
+ sea("#29b6f6",470)+wave(60,525)+wave(300,565)+wave(470,515)+
+ P("M590 620 L612 430 Q630 385 690 378 L820 372 V620 Z","#a1887f")+
+ P("M612 430 Q630 385 690 378 L820 372 L820 398 Q720 396 690 402 Q640 408 616 448 Z","#8bc34a")+
+ N("M650 470 L670 500 M720 450 L745 480 M640 540 L680 560")+
+ G(250,445,1,P("M-36 0 L-62 -20 L-62 20 Z","#ffb300")+E(0,0,42,24,"#ffb300")+N("M-8 -18 Q2 0 -8 18")+K(22,-5,6,6)).replace('translate(250 445)','translate(250 445) rotate(-25)')+
+ drop(205,482,"#e1f5fe")+drop(290,486,"#e1f5fe")+drop(250,492,"#e1f5fe")+
+ speed(40,295)+
+ P("M385 300 Q260 190 95 225 Q160 255 190 300 Q240 285 285 325 Q330 312 385 332 Z","#ab47bc")+N("M380 300 Q280 232 160 234")+
+ P("M440 300 Q560 180 725 200 Q655 245 640 290 Q585 282 540 325 Q495 312 440 332 Z","#ab47bc")+N("M445 300 Q560 232 662 216")+
+ P("M395 345 L385 380 L400 382 L408 348 Z","#ba68c8")+P("M420 345 L415 382 L430 382 L432 348 Z","#ba68c8")+
+ E(412,320,46,32,"#ba68c8")+E(412,336,26,15,"#e1bee7")+
+ P("M468 266 Q430 225 402 218 Q442 252 456 280 Z","#ff7043")+
+ P("M440 292 Q468 250 520 255 L606 270 Q565 286 522 293 Q482 312 450 316 Z","#ba68c8")+
+ eye(492,274,12)+N("M522 287 L592 273")},
+
+{id:"ptero-nest",cat:"dino",name:"Flugsaurier-Nest",svg:
+ sky("#ffcc80")+sun(660,110)+
+ P("M30 420 L130 250 L170 250 L270 420 Z","#a1887f")+P("M130 250 Q150 235 170 250 L162 270 L150 260 L138 270 Z","#ff7043")+
+ C(150,215,22,"#bdbdbd")+C(178,185,28,"#bdbdbd")+C(140,168,20,"#bdbdbd")+
+ PF("M280 420 Q550 408 820 420 V620 H280 Z","#4fc3f7")+wave(620,470)+wave(700,520)+
+ bird(400,90)+bird(450,70)+
+ P("M-20 620 L-20 440 Q150 395 380 410 Q520 420 570 480 L610 620 Z","#8d6e63")+
+ N("M80 500 L120 540 M300 470 L330 520 M450 520 L480 560")+tuft(70,455)+tuft(420,430)+
+ P("M150 418 Q260 395 370 418 Q260 430 150 418 Z","#d7a65a")+
+ C(225,392,26,"#ce93d8")+P("M245 386 L290 393 L245 402 Z","#ffca28")+eye(230,384,9)+
+ C(302,386,24,"#ba68c8")+P("M314 372 L346 350 L324 384 Z","#ffca28")+P("M318 388 L350 396 L320 400 Z","#ffca28")+eye(300,378,8)+
+ P("M180 418 L190 400 L200 412 L210 398 L220 418 Z","#fff3e0")+
+ P("M145 418 Q260 470 375 418 Q370 455 260 462 Q150 455 145 418 Z","#c8963e")+N("M170 435 Q260 452 350 435")+
+ P("M520 300 Q580 360 555 440 Q525 390 505 320 Z","#7e57c2")+
+ R(478,385,12,48,5,"#9575cd")+R(505,385,12,48,5,"#9575cd")+
+ E(495,345,42,58,"#9575cd")+E(485,360,20,32,"#d1c4e9")+
+ P("M470 300 Q420 370 445 440 Q470 385 485 320 Z","#7e57c2")+
+ P("M520 262 Q565 230 592 235 Q560 260 528 282 Z","#ff7043")+
+ P("M480 285 Q485 245 520 250 Q535 262 525 285 Z","#9575cd")+
+ P("M486 262 L395 290 L490 288 Z","#ffca28")+
+ eye(510,265,10)},
+
+{id:"langhals",cat:"dino",name:"Langhals",svg:
+ sky("#b3e5fc")+cloud(450,110)+cloud(250,60)+
+ P("M560 460 L680 300 L820 460 Z","#b0bec5")+
+ P("M650 340 L680 300 L712 342 L696 334 L680 348 L664 334 Z","#ffffff")+
+ ground("#aed581")+
+ E(150,555,115,30,"#4fc3f7")+wave(95,555)+wave(165,562)+
+ bush(675,492)+
+ P("M140 505 Q128 390 158 270 L182 274 Q160 390 176 505 Z","#a1887f")+
+ N("M146 470 h22 M146 430 h22 M150 390 h22 M154 350 h20 M158 310 h20")+
+ P("M170 265 Q110 200 50 245 Q115 270 170 265 Z","#43a047")+
+ P("M170 265 Q230 200 290 240 Q225 270 170 265 Z","#43a047")+
+ P("M170 265 Q110 280 90 345 Q150 320 170 265 Z","#43a047")+
+ P("M170 265 Q230 280 255 340 Q195 320 170 265 Z","#43a047")+
+ C(160,280,12,"#8d6e63")+C(184,284,12,"#8d6e63")+
+ butterfly(330,230,"#ffb300")+
+ tuft(300,575)+tuft(520,565)+tuft(760,560)+
+ P("M350 410 Q260 450 205 515 Q300 490 365 460 Z","#9575cd")+
+ R(380,440,45,95,18,"#7e57c2")+R(545,440,45,95,18,"#7e57c2")+
+ E(480,410,150,80,"#9575cd")+
+ N("M410 470 Q480 488 560 470")+
+ R(405,450,52,92,18,"#9575cd")+R(575,445,52,92,18,"#9575cd")+
+ nail(419,538)+nail(442,538)+nail(589,533)+nail(612,533)+
+ C(430,385,18,"#d1c4e9")+C(495,365,12,"#d1c4e9")+C(525,410,15,"#d1c4e9")+C(390,425,11,"#d1c4e9")+C(560,380,9,"#d1c4e9")+
+ P("M545 370 Q560 250 600 150 L655 165 Q615 265 615 385 Z","#9575cd")+
+ C(590,300,10,"#d1c4e9")+C(605,240,8,"#d1c4e9")+C(620,195,7,"#d1c4e9")+
+ E(640,140,58,36,"#9575cd")+eye(650,128,12)+N("M665 152 Q680 158 693 148")+K(688,132,3,3)},
+
+{id:"dreihorn",cat:"dino",name:"Triceratops",svg:
+ sky("#c8e6ff")+sun(100,90)+cloud(560,70)+
+ P("M-20 460 L110 290 L250 460 Z","#b0bec5")+
+ ground("#c5e1a5")+
+ rock(610,530,120)+
+ flower(110,535)+flower(720,550,"#ce93d8")+flower(40,560,"#ffb74d")+
+ butterfly(700,190,"#ec407a")+
+ tuft(200,570)+tuft(560,575)+
+ P("M220 360 Q120 370 80 430 Q170 425 230 410 Z","#ff9800")+
+ R(250,420,55,100,20,"#f57c00")+R(440,420,55,100,20,"#f57c00")+
+ E(370,370,170,100,"#ff9800")+
+ C(330,330,20,"#ffcc80")+C(400,305,14,"#ffcc80")+C(290,385,12,"#ffcc80")+C(440,360,16,"#ffcc80")+C(370,405,10,"#ffcc80")+
+ R(280,430,60,100,20,"#ff9800")+R(470,430,60,100,20,"#ff9800")+
+ nail(294,526)+nail(310,526)+nail(326,526)+nail(484,526)+nail(500,526)+nail(516,526)+
+ frillBumps+
+ E(560,290,85,105,"#ffcc80")+
+ C(525,235,11,"#ffb74d")+C(560,212,9,"#ffb74d")+C(505,290,10,"#ffb74d")+C(595,225,8,"#ffb74d")+
+ P("M590 300 L600 190 L635 295 Z","#fff8e1")+P("M650 305 L690 200 L690 315 Z","#fff8e1")+
+ P("M545 330 Q560 280 630 285 Q700 290 730 345 Q745 380 700 395 L600 400 Q545 395 545 330 Z","#ff9800")+
+ P("M712 340 L750 300 L736 354 Z","#fff8e1")+
+ eye(640,330,15)+N("M660 375 Q690 382 718 370")+K(724,358,3,3)},
+
+{id:"stego",cat:"dino",name:"Stegosaurus",svg:
+ sky("#b2ebf2")+cloud(560,100)+
+ P("M200 120 L118 88 L188 138 Z","#ce93d8")+P("M212 120 L292 84 L222 140 Z","#ce93d8")+
+ E(205,128,24,11,"#ba68c8")+P("M226 124 L250 128 L226 134 Z","#ffca28")+K(222,124,2,2)+
+ P("M560 460 L630 345 L662 345 L732 460 Z","#bcaaa4")+P("M630 345 Q646 330 662 345 L655 362 L646 352 L637 362 Z","#ff7043")+
+ ground("#dce775")+
+ rock(630,482,140)+
+ flower(90,535)+flower(565,555,"#ce93d8")+tuft(200,575)+tuft(470,575)+tuft(740,555)+
+ P("M268 335 L300 250 L332 322 Z","#ef5350")+P("M328 312 L370 212 L412 304 Z","#ef5350")+
+ P("M402 302 L452 205 L494 306 Z","#ef5350")+P("M484 312 L528 235 L560 332 Z","#ef5350")+
+ N("M300 275 L300 312 M370 240 L370 300 M452 233 L452 300 M528 260 L528 315")+
+ P("M712 292 L724 228 L738 288 Z","#fff8e1")+P("M700 312 L772 300 L718 334 Z","#fff8e1")+
+ P("M540 360 Q650 340 740 270 Q720 360 560 430 Z","#26a69a")+
+ R(300,420,50,98,18,"#00897b")+R(470,420,50,98,18,"#00897b")+
+ E(400,380,175,90,"#26a69a")+
+ C(380,350,16,"#80cbc4")+C(445,372,12,"#80cbc4")+C(335,392,12,"#80cbc4")+C(490,340,10,"#80cbc4")+C(410,410,10,"#80cbc4")+
+ N("M300 455 Q400 478 520 458")+
+ R(330,430,55,98,18,"#26a69a")+R(500,430,55,98,18,"#26a69a")+
+ nail(344,524)+nail(370,524)+nail(514,524)+nail(540,524)+
+ P("M262 352 Q220 372 188 398 L206 452 Q250 432 282 432 Z","#26a69a")+
+ E(175,425,55,36,"#26a69a")+eye(162,414,12)+N("M150 442 Q136 448 126 440")+K(130,418,3,3)},
+
+/* ===== MEER ===== */
+{id:"hai",cat:"meer",name:"Weißer Hai",svg:
+ sky("#29b6f6")+rays()+sand(522)+
+ rock(560,528,160,"#90a4ae")+weed(40)+coral(720,524,"#ff8a65")+shell(300,565)+starP(450,566,.5)+pebbles(150,570)+
+ fishS(115,150,"#ffeb3b",-1,.7)+fishS(70,200,"#ffeb3b",-1,.6)+N("M150 140 h40 M140 160 h30 M100 195 h35")+
+ P("M150 310 L55 195 Q95 290 75 310 Q95 335 55 420 Z","#78909c")+
+ P("M380 218 L425 110 L485 214 Z","#78909c")+
+ P("M240 262 L252 232 L278 258 Z","#78909c")+
+ P("M120 300 Q250 200 480 210 Q640 220 722 298 Q650 362 480 380 Q300 392 145 332 Z","#78909c")+
+ P("M190 330 Q340 380 480 378 Q610 370 705 318 Q600 345 480 350 Q320 350 190 330 Z","#eceff1")+
+ P("M600 322 Q665 342 712 304 Q690 345 640 354 Q610 352 600 322 Z","#e57373")+
+ tooth(612,324)+tooth(632,329)+tooth(652,330)+tooth(672,325)+tooth(690,316)+
+ N("M560 268 Q550 300 560 330 M580 266 Q570 300 580 330 M600 268 Q590 300 600 326")+
+ P("M430 362 Q420 445 355 475 Q400 405 400 364 Z","#607d8b")+
+ eye(642,262,12)+N("M622 243 Q642 234 660 244")+
+ bub(740,230,12)+bub(760,190,17)+bub(470,160,10)},
+
+{id:"hammer",cat:"meer",name:"Hammerhai",svg:
+ sky("#4fc3f7")+rays()+sand(520)+
+ weed(705,"#66bb6a")+rock(30,528,130)+coral(600,522,"#f06292")+pebbles(300,565)+starP(470,565,.5,"#ff7043")+
+ fishS(600,110,"#ffb300",1,.6)+fishS(680,140,"#ffb300",1,.6)+fishS(615,175,"#ffb300",1,.6)+
+ P("M150 300 L60 235 Q95 300 60 365 Z","#90a4ae")+
+ P("M470 286 Q440 200 385 185 Q418 250 430 290 Z","#78909c")+
+ P("M470 314 Q440 400 385 415 Q418 350 430 310 Z","#78909c")+
+ P("M240 296 Q225 260 200 250 Q215 280 225 298 Z","#78909c")+P("M240 304 Q225 340 200 350 Q215 320 225 302 Z","#78909c")+
+ P("M130 300 Q300 255 560 278 Q600 284 612 300 Q600 316 560 322 Q300 345 130 300 Z","#90a4ae")+
+ N("M200 300 Q380 297 560 300")+
+ P("M590 300 Q598 215 642 200 Q672 200 672 228 Q656 300 672 372 Q672 400 642 400 Q598 385 590 300 Z","#90a4ae")+
+ eye(652,220,11)+eye(652,380,11)+
+ N("M668 265 Q676 300 668 335")+
+ bub(720,260,12)+bub(745,220,17)+bub(330,200,10)},
+
+{id:"walhai",cat:"meer",name:"Walhai",svg:
+ sky("#039be5")+rays()+sand(525)+
+ weed(60,"#66bb6a")+coral(640,528,"#ff8a65")+shell(400,570,"#ce93d8")+starP(250,565,.5)+
+ fishS(520,470,"#ffeb3b",1,.6)+fishS(140,140,"#ef5350",1,.6)+
+ P("M690 300 L785 195 Q765 290 785 300 Q765 330 785 420 Z","#546e7a")+
+ P("M430 215 L480 140 L520 212 Z","#546e7a")+
+ P("M720 300 Q600 200 380 210 Q200 220 145 285 Q135 330 200 352 Q380 400 600 372 Q705 352 720 300 Z","#546e7a")+
+ P("M160 330 Q380 395 600 372 Q690 355 712 318 Q600 350 400 352 Q250 350 160 330 Z","#cfd8dc")+
+ spots+
+ N("M300 240 Q295 290 300 335 M430 222 Q425 285 430 345 M560 228 Q555 290 560 345")+
+ N("M148 300 Q170 322 222 318")+
+ eye(225,282,10)+
+ P("M330 360 Q320 440 260 465 Q300 400 300 362 Z","#455a64")+
+ fishS(420,400,"#bdbdbd",-1,.45)+
+ bub(120,240,12)+bub(95,200,16)},
+
+{id:"delfin",cat:"meer",name:"Delfin",svg:
+ sky("#b3e5fc")+sun(660,90)+cloud(120,90)+bird(300,70)+bird(345,52)+
+ sea("#29b6f6",400)+wave(80,450)+wave(500,470)+wave(650,430)+sand(560)+
+ starP(600,575,.4)+shell(130,578)+fishS(360,520,"#ffb300",-1,.6)+
+ C(700,385,30,"#ef5350")+P("M700 355 Q685 385 700 415 Q715 385 700 355 Z","#ffeb3b")+
+ P("M140 420 Q170 380 190 410 Q210 368 240 405 Q262 372 285 415 Q210 430 140 420 Z","#e1f5fe")+
+ P("M400 215 Q420 160 470 150 Q450 180 460 205 Z","#42a5f5")+
+ P("M212 405 L158 372 Q178 404 146 432 Z","#42a5f5")+
+ P("M210 405 Q260 250 430 205 Q540 180 600 220 L668 228 Q650 248 610 252 Q580 290 520 300 Q380 330 260 430 Z","#42a5f5")+
+ P("M260 430 Q380 330 520 300 Q580 290 610 252 Q600 262 560 272 Q450 290 300 380 Q270 400 260 430 Z","#e3f2fd")+
+ P("M470 290 Q470 350 420 370 Q440 330 440 296 Z","#1e88e5")+
+ eye(570,228,11)+N("M612 248 Q630 252 648 246")+
+ drop(250,360,"#e1f5fe")+drop(200,350,"#e1f5fe")+drop(300,380,"#e1f5fe")},
+
+{id:"fisch",cat:"meer",name:"Clownfisch",svg:
+ sky("#4fc3f7")+rays()+
+ sand(500)+
+ pebbles(330,555)+pebbles(500,575)+pebbles(40,565)+
+ weed(80)+weed(690,"#66bb6a")+coral(230,510,"#f06292")+
+ shell(600,530)+starP(440,548,.6)+
+ fishS(140,130,"#ffeb3b")+fishS(680,340,"#ba68c8",-1)+
+ P("M250 300 L160 220 Q140 300 160 380 Z","#ff7043")+
+ N("M178 250 L235 292 M175 345 L235 310")+
+ P("M330 222 Q400 150 470 215 Z","#ff7043")+P("M360 372 Q400 432 450 378 Z","#ff7043")+
+ N("M370 205 L385 175 M410 205 L420 172")+
+ E(400,300,165,95,"#ff7043")+
+ P("M330 222 Q360 300 330 378 L372 386 Q402 300 372 214 Z","#fff3e0")+
+ P("M470 216 Q495 300 470 384 L505 370 Q528 300 505 230 Z","#fff3e0")+
+ P("M410 330 Q440 345 435 370 Q415 360 410 330 Z","#ff8a65")+
+ eye(530,280,19)+N("M548 322 Q560 328 552 340")+
+ bub(600,190,14)+bub(630,140,20)+bub(670,80,26)+bub(120,330,10)+bub(105,300,14)},
+
+{id:"wal",cat:"meer",name:"Wal",svg:
+ sky("#b3e5fc")+sun(680,70)+bird(160,70)+bird(210,48)+
+ P("M30 168 Q90 112 160 168 Z","#ffe082")+P("M95 140 Q92 105 102 80 L110 82 Q102 110 104 140 Z","#a1887f")+
+ P("M104 82 Q80 60 60 75 Q85 78 104 82 Z","#43a047")+P("M104 82 Q130 60 150 76 Q125 78 104 82 Z","#43a047")+
+ sea("#29b6f6",165)+
+ wave(560,210)+wave(680,240)+wave(60,230)+
+ PF("M-20 540 Q400 505 820 540 V620 H-20 Z","#ffe082")+
+ coral(690,550,"#ff8a65")+starP(300,565,.5)+shell(470,575,"#ce93d8")+
+ fishS(700,440,"#ffb300",-1)+fishS(110,470,"#ef5350")+
+ P("M460 225 Q450 150 400 110 Q450 120 470 160 Q480 100 530 80 Q495 130 488 225 Z","#e1f5fe")+
+ P("M180 330 Q120 280 70 300 Q110 330 120 360 Q110 390 70 420 Q130 430 185 380 Z","#1e88e5")+
+ P("M170 360 Q260 230 420 220 Q600 215 660 330 Q690 420 600 450 Q450 480 300 430 Q220 400 170 360 Z","#1e88e5")+
+ P("M330 430 Q470 445 655 395 Q650 438 600 450 Q450 478 330 430 Z","#bbdefb")+
+ N("M400 452 Q500 452 600 425 M460 462 Q540 460 620 438")+
+ C(380,280,12,"#64b5f6")+C(430,260,9,"#64b5f6")+C(300,320,10,"#64b5f6")+
+ P("M470 405 Q505 470 440 500 Q452 450 430 412 Z","#1565c0")+
+ eye(560,330,14)+N("M600 388 Q632 394 656 372")+
+ bub(720,300,12)+bub(745,260,17)},
+
+{id:"krake",cat:"meer",name:"Krake",svg:
+ sky("#4dd0e1")+rays()+
+ sand(510)+
+ coral(110,512,"#ff8a65")+
+ P("M560 515 Q590 430 680 440 Q760 450 770 515 Z","#90a4ae")+C(640,470,10,"#b0bec5")+C(700,480,8,"#b0bec5")+
+ starP(650,560,.5)+shell(475,580,"#ce93d8")+pebbles(240,570)+
+ fishS(690,250,"#ffeb3b",-1)+fishS(130,330,"#ba68c8")+
+ P("M290 300 Q210 320 180 380 Q160 420 120 420 Q160 450 195 395 Q225 345 300 335 Z","#ec407a")+C(215,352,7,"#f8bbd0")+C(181,398,6,"#f8bbd0")+
+ P("M300 330 Q220 380 230 450 Q240 510 180 520 Q260 530 270 460 Q275 400 330 360 Z","#ec407a")+C(252,455,7,"#f8bbd0")+C(240,492,6,"#f8bbd0")+
+ P("M340 360 Q300 430 320 500 Q330 540 290 560 Q360 560 355 500 Q345 440 375 375 Z","#ec407a")+C(338,495,7,"#f8bbd0")+C(322,540,6,"#f8bbd0")+
+ P("M390 370 Q390 450 420 510 Q440 545 410 570 Q470 560 455 505 Q430 440 425 372 Z","#ec407a")+C(423,470,7,"#f8bbd0")+C(440,525,6,"#f8bbd0")+
+ P("M440 365 Q480 430 520 480 Q545 520 520 550 Q580 535 555 480 Q520 420 475 355 Z","#ec407a")+C(515,455,7,"#f8bbd0")+C(549,510,6,"#f8bbd0")+
+ P("M480 340 Q560 370 590 430 Q610 470 650 470 Q610 500 575 450 Q545 395 470 370 Z","#ec407a")+C(578,438,7,"#f8bbd0")+
+ P("M280 320 Q260 160 390 140 Q520 140 510 310 Q490 380 395 380 Q300 380 280 320 Z","#ec407a")+
+ C(340,210,15,"#f8bbd0")+C(452,200,12,"#f8bbd0")+C(398,178,9,"#f8bbd0")+C(470,250,8,"#f8bbd0")+
+ E(325,322,16,10,"#f48fb1")+E(465,322,16,10,"#f48fb1")+
+ eye(355,282,21)+eye(435,282,21)+N("M370 336 Q395 356 420 336")+
+ bub(600,170,14)+bub(630,120,20)+bub(230,110,16)},
+
+{id:"kroete",cat:"meer",name:"Schildkröte",svg:
+ sky("#4fc3f7")+rays()+
+ sand(500)+weed(690)+coral(270,505,"#f06292")+
+ starP(150,525,.9)+shell(560,565)+pebbles(400,560)+pebbles(720,575)+
+ fishS(140,120,"#ffb300")+fishS(690,140,"#ef5350",-1)+
+ P("M290 262 Q240 210 198 210 Q230 262 300 292 Z","#aed581")+
+ P("M262 360 Q190 380 170 430 Q232 420 282 395 Z","#aed581")+
+ P("M500 250 Q560 170 620 170 Q590 230 520 280 Z","#aed581")+N("M545 220 Q570 200 595 190")+
+ P("M490 380 Q560 440 612 450 Q580 390 510 350 Z","#aed581")+N("M535 400 Q565 420 590 435")+
+ E(610,310,70,48,"#aed581")+C(598,328,6,"#8bc34a")+C(620,340,5,"#8bc34a")+
+ E(400,320,175,112,"#2e7d32")+
+ E(400,310,165,110,"#43a047")+
+ P("M370 255 L430 255 L460 305 L430 355 L370 355 L340 305 Z","#81c784")+
+ E(290,305,30,40,"#81c784")+E(510,305,30,40,"#81c784")+
+ E(335,235,34,20,"#81c784")+E(465,235,34,20,"#81c784")+E(335,378,34,20,"#81c784")+E(465,378,34,20,"#81c784")+
+ eye(640,296,13)+N("M650 330 Q665 336 675 326")+
+ bub(560,140,14)+bub(590,95,20)+bub(420,150,10)},
+
+/* ===== VULKANE & NATUR ===== */
+{id:"vulkan",cat:"natur",name:"Vulkan",svg:
+ sky("#ffab91")+
+ C(330,140,55,"#9e9e9e")+C(470,140,60,"#9e9e9e")+C(360,70,50,"#bdbdbd")+C(450,70,55,"#bdbdbd")+C(400,110,70,"#9e9e9e")+
+ C(250,160,14,"#ff7043")+C(560,170,12,"#ff7043")+C(195,230,10,"#ffab00")+C(615,240,11,"#ffab00")+
+ N("M262 172 l20 22 M548 182 l-20 22 M205 242 l18 18 M605 252 l-18 18")+
+ P("M352 238 Q330 175 372 148 Q386 198 398 228 Q410 165 448 138 Q458 200 446 240 Z","#ff9800")+
+ P("M80 520 L318 232 Q400 205 482 232 L720 520 Z","#795548")+
+ P("M318 232 Q400 205 482 232 Q440 252 400 247 Q360 252 318 232 Z","#ff5722")+
+ P("M375 245 Q355 305 378 345 Q345 405 366 480 L392 480 Q378 405 405 345 Q385 295 408 247 Z","#ff7043")+
+ P("M448 246 Q480 305 470 362 Q500 425 522 505 L548 505 Q522 412 497 352 Q508 292 470 244 Z","#ffab00")+
+ N("M200 420 L232 398 M600 430 L568 408 M250 470 L300 462 M640 470 L600 460")+
+ PF("M-20 500 Q200 485 400 505 T820 495 V620 H-20 Z","#8d6e63")+
+ E(560,545,70,18,"#ff7043")+
+ palm(70,560)+palm(710,565)+rock(250,580,90,"#6d4c41")+rock(420,590,60,"#6d4c41")},
+
+{id:"insel",cat:"natur",name:"Vulkaninsel",svg:
+ sky("#b3e5fc")+sun(110,90)+bird(240,110)+bird(280,90)+
+ C(440,150,30,"#bdbdbd")+C(470,115,38,"#bdbdbd")+C(512,78,45,"#bdbdbd")+
+ P("M300 430 L420 200 Q450 188 480 200 L620 430 Z","#8d6e63")+
+ P("M420 200 Q450 188 480 200 Q450 212 420 200 Z","#ff5722")+
+ P("M440 205 Q430 260 450 300 Q440 340 455 380 L470 380 Q458 340 466 300 Q448 260 462 205 Z","#ff7043")+
+ P("M180 440 Q230 400 320 410 L600 410 Q690 405 740 440 Q700 460 460 462 Q250 462 180 440 Z","#ffe082")+
+ palm(250,438)+palm(668,440)+
+ sea("#29b6f6",448)+wave(60,490)+wave(320,520)+wave(560,500)+
+ P("M80 500 L200 500 L180 530 L100 530 Z","#e53935")+R(136,400,6,100,2,"#8d6e63")+P("M142 405 L142 495 L205 495 Z","#fff59d")+P("M136 400 L110 410 L136 418 Z","#4caf50")+
+ P("M600 540 Q620 490 660 475 Q640 510 650 540 Q665 500 705 490 Q680 520 690 550 Z","#1e88e5")+
+ fishS(400,570,"#ffb300",1,.7)},
+
+{id:"baum",cat:"natur",name:"Riesenbaum",svg:
+ sky("#b3e5fc")+sun(720,80)+cloud(30,70)+bird(640,170)+
+ ground("#8bc34a",470)+
+ P("M330 570 Q348 470 360 300 L440 300 Q452 470 470 570 Z","#8d6e63")+
+ P("M365 400 Q290 380 200 370 L205 350 Q300 355 368 370 Z","#8d6e63")+
+ P("M435 390 Q510 360 590 350 L586 330 Q500 340 432 360 Z","#8d6e63")+
+ C(400,160,115,"#43a047")+C(260,215,95,"#4caf50")+C(540,215,95,"#4caf50")+C(320,105,80,"#66bb6a")+C(480,105,80,"#66bb6a")+C(400,250,80,"#43a047")+
+ apple(300,170)+apple(380,90)+apple(500,160)+apple(560,250)+apple(240,250)+apple(440,230)+
+ E(560,322,32,12,"#a1887f")+C(550,312,8,"#81d4fa")+C(568,312,8,"#81d4fa")+
+ N("M230 362 V478 M290 372 V478")+R(218,474,84,14,5,"#ffca28")+
+ E(400,430,26,34,"#4e342e")+eye(390,422,8)+eye(412,422,8)+P("M396 436 L401 446 L406 436 Z","#ffca28")+
+ P("M330 570 Q290 575 250 592 L330 590 Z","#8d6e63")+P("M470 570 Q510 575 550 592 L470 590 Z","#8d6e63")+
+ N("M380 500 q8 20 0 40 M430 510 q-8 20 0 40 M418 330 q6 14 0 28")+
+ mush(120,540)+mush(160,560)+mush(660,555)+flower(80,580,"#ffb74d")+flower(720,520)+tuft(600,590)+tuft(260,595)},
+
+{id:"sturm",cat:"natur",name:"Großer Sturm",svg:
+ sky("#607d8b")+
+ C(150,90,70,"#78909c")+C(260,70,80,"#78909c")+C(380,100,75,"#90a4ae")+C(520,70,85,"#78909c")+C(660,95,75,"#90a4ae")+C(770,70,60,"#78909c")+
+ P("M300 160 L265 260 L298 260 L255 370 L350 230 L315 230 L345 160 Z","#ffeb3b")+
+ P("M560 150 L540 215 L562 215 L535 285 L600 200 L577 200 L595 150 Z","#ffeb3b")+
+ rainDrops+
+ ground("#689f38",470)+
+ R(80,370,170,130,6,"#ffcc80")+P("M60 380 L165 300 L270 380 Z","#c62828")+
+ R(105,400,55,45,6,"#fff59d")+N("M132 400 V445 M105 422 H160")+R(185,420,45,80,6,"#8d6e63")+
+ P("M600 560 Q598 450 640 380 L662 392 Q628 462 632 560 Z","#8d6e63")+
+ P("M610 380 Q600 300 680 290 Q760 285 790 330 Q800 380 740 395 Q680 410 610 380 Z","#4caf50")+
+ leaf(470,380)+leaf(520,330)+leaf(400,420)+leaf(720,440)+
+ P("M440 300 Q480 250 520 300 Z","#e53935")+N("M480 300 V330 q0 10 -10 8")+
+ N("M300 440 q40 -30 80 0 q40 30 80 0 M330 490 q30 -20 60 0 q30 20 60 0 M40 300 q30 -20 60 0")+
+ E(400,545,80,15,"#4fc3f7")+E(160,560,60,12,"#4fc3f7")},
+
+/* ===== FLUGZEUGE ===== */
+{id:"jet",cat:"flug",name:"Flugzeug",svg:
+ sky("#81d4fa")+sun(700,80)+cloud(60,100)+cloud(520,480)+cloud(80,440)+bird(560,170)+
+ N("M20 300 h70 M30 330 h60 M10 270 h50")+
+ P("M400 278 L345 180 L390 180 L475 276 Z","#1e88e5")+
+ P("M185 282 L135 165 L185 165 L255 280 Z","#1e88e5")+
+ P("M110 320 Q118 278 180 278 L620 270 Q705 266 735 300 Q705 333 620 332 L180 342 Q118 344 110 320 Z","#ffe082")+
+ P("M180 316 L650 309 L652 321 L180 329 Z","#1e88e5")+
+ [250,284,318,352,386,420,454,488,522,556,590].map(x=>C(x,296,8,"#1565c0")).join("")+
+ R(214,286,22,36,5,"#bbdefb")+
+ P("M688 286 Q712 289 724 302 L692 302 Z","#1565c0")+
+ P("M175 322 L105 368 L155 370 L228 328 Z","#42a5f5")+
+ P("M385 326 L300 470 L365 470 L488 326 Z","#42a5f5")+
+ R(320,372,90,34,17,"#90a4ae")+E(410,389,10,17,"#616161")},
+
+{id:"propeller",cat:"flug",name:"Propellerflugzeug",svg:
+ sky("#aee2ff")+sun(110,90)+cloud(560,90)+
+ PF("M-20 470 Q150 420 320 460 T820 450 V620 H-20 Z","#8bc34a")+PF("M-20 525 Q300 495 820 525 V620 H-20 Z","#689f38")+
+ R(620,430,60,45,4,"#e57373")+P("M612 432 L650 405 L688 432 Z","#8d6e63")+C(110,460,26,"#43a047")+R(104,470,12,30,3,"#8d6e63")+
+ C(140,280,14,"#eceff1")+C(108,272,18,"#eceff1")+C(70,262,22,"#eceff1")+
+ P("M210 290 L160 210 L205 210 L262 280 Z","#e53935")+P("M205 300 L140 322 L218 322 Z","#c62828")+
+ R(300,190,280,26,12,"#ffca28")+
+ R(340,216,10,130,3,"#8d6e63")+R(520,216,10,130,3,"#8d6e63")+
+ C(420,244,24,"#ffccbc")+P("M396 240 Q400 212 420 212 Q442 212 444 240 Z","#8d6e63")+C(410,240,8,"#b3e5fc")+C(430,240,8,"#b3e5fc")+
+ P("M398 262 Q340 255 300 270 Q345 270 400 272 Z","#4caf50")+
+ P("M200 300 Q200 270 240 268 L560 262 Q610 262 620 300 Q610 338 560 338 L240 332 Q200 330 200 300 Z","#e53935")+
+ R(380,258,80,14,7,"#b71c1c")+
+ N("M280 300 H540")+
+ R(300,342,260,26,12,"#ffca28")+
+ N("M360 368 L360 380 M480 368 L480 380")+C(360,400,24,"#424242")+C(480,400,24,"#424242")+C(360,400,8,"#bdbdbd")+C(480,400,8,"#bdbdbd")+
+ C(622,300,18,"#9e9e9e")+E(642,300,10,72,"#8d6e63")+
+ N("M665 230 Q690 300 665 370 M680 250 Q700 300 680 350")},
+
+{id:"heli",cat:"flug",name:"Rettungshubschrauber",svg:
+ sky("#aee2ff")+sun(700,80)+cloud(40,90)+
+ ground("#9ccc65",480)+
+ bldg(20,560,110,140,"#90a4ae")+bldg(560,560,120,120,"#b0bec5")+
+ R(250,500,300,60,8,"#e0e0e0")+R(370,505,60,50,4,"#fafafa")+N("M385 515 V545 M415 515 V545 M385 530 H415")+
+ heli("#e53935","#fafafa")+
+ P("M370 255 h20 v-14 h14 v14 h20 v14 h-20 v14 h-14 v-14 h-20 Z","#fafafa")},
+
+{id:"polizeiheli",cat:"flug",name:"Polizeihubschrauber",svg:
+ sky("#5c6bc0")+C(700,80,36,"#fff9c4")+C(686,72,8,"#fff59d")+
+ [[60,60],[160,40],[300,80],[560,50],[620,140],[90,150],[760,180]].map(([x,y])=>starP(x,y,.25,"#fff59d")).join("")+
+ P("M370 420 L250 580 L560 580 L450 420 Z","#fff59d")+
+ bldg(-10,600,120,200,"#7986cb")+bldg(120,600,90,150,"#9fa8da")+bldg(580,600,110,180,"#7986cb")+bldg(700,600,110,230,"#9fa8da")+
+ heli("#1e88e5","#cfd8dc")+
+ R(405,372,30,20,6,"#fff59d")},
+
+/* ===== POLIZEI & FEUERWEHR ===== */
+{id:"polizei",cat:"blau",name:"Polizeiauto",svg:
+ sky("#aee2ff")+sun(700,70)+cloud(80,80)+
+ bldg(30,380,140,170,"#ffcc80")+bldg(190,380,120,200,"#b0bec5")+bldg(560,380,130,150,"#a5d6a7")+bldg(700,380,110,190,"#ffab91")+
+ PF("M-20 380 H820 V620 H-20 Z","#9e9e9e")+R(-20,380,840,26,0,"#bdbdbd")+
+ R(20,525,90,14,4,"#fafafa")+R(220,525,90,14,4,"#fafafa")+R(420,525,90,14,4,"#fafafa")+R(620,525,90,14,4,"#fafafa")+
+ siren(400,236,80)+
+ P("M120 400 Q120 350 170 345 L260 340 L330 270 Q345 258 370 258 L520 258 Q548 258 565 275 L620 335 L680 345 Q720 352 720 395 L720 420 Q720 435 700 435 L140 435 Q120 435 120 415 Z","#cfd8dc")+
+ P("M345 280 L285 340 L420 340 L420 280 Z","#b3e5fc")+P("M440 280 L440 340 L590 340 L545 285 Q535 278 520 280 Z","#b3e5fc")+
+ R(130,372,580,24,4,"#1e88e5")+
+ N("M430 345 V430")+R(380,352,26,8,4,"#90a4ae")+R(470,352,26,8,4,"#90a4ae")+
+ R(690,360,26,16,6,"#fff59d")+R(122,360,16,18,5,"#ef5350")+
+ wheel(240,435,48)+wheel(600,435,48)},
+
+{id:"feuerwehr",cat:"blau",name:"Feuerwehrauto",svg:
+ sky("#aee2ff")+cloud(560,70)+
+ R(-20,120,330,340,4,"#bf360c")+P("M-30 130 L140 60 L320 130 Z","#5d4037")+R(30,200,240,260,8,"#d7ccc8")+N("M30 250 H270 M30 300 H270 M30 350 H270 M30 400 H270")+
+ PF("M-20 450 H820 V620 H-20 Z","#9e9e9e")+R(-20,450,840,20,0,"#bdbdbd")+
+ G(60,60,1,truck())},
+
+{id:"loeschen",cat:"blau",name:"Feuer löschen",svg:
+ sky("#ffe0b2")+
+ C(130,110,40,"#9e9e9e")+C(180,80,48,"#bdbdbd")+C(240,60,40,"#9e9e9e")+
+ ground("#9ccc65",480)+
+ R(70,260,250,240,6,"#ffcc80")+P("M50 272 L195 160 L340 272 Z","#8d6e63")+
+ R(100,300,70,60,6,"#ffeb3b")+R(220,300,70,60,6,"#fff59d")+R(160,400,60,100,6,"#8d6e63")+
+ flame(110,300)+flame(200,190)+
+ P("M600 300 Q430 140 230 210 Q430 175 585 318 Z","#4fc3f7")+
+ drop(240,250,"#4fc3f7")+drop(270,275,"#4fc3f7")+drop(215,240,"#4fc3f7")+
+ C(360,520,16,"#e53935")+R(350,490,20,30,6,"#e53935")+
+ G(440,265,.48,truck())+
+ N("M600 318 Q650 340 640 400")},
+
+{id:"boot",cat:"blau",name:"Polizeiboot",svg:
+ sky("#aee2ff")+sun(640,80)+cloud(300,70)+bird(480,140)+
+ P("M20 460 Q60 400 140 400 Q200 410 220 460 Z","#90a4ae")+
+ R(80,180,50,230,4,"#e53935")+R(80,240,50,36,0,"#fafafa")+R(80,320,50,36,0,"#fafafa")+R(70,150,70,34,6,"#fff59d")+P("M64 152 L105 115 L146 152 Z","#e53935")+
+ N("M150 165 l40 -10 M150 175 l40 10")+
+ sea("#29b6f6",440)+wave(60,520)+wave(250,560)+wave(700,500)+
+ siren(420,248,70)+
+ R(330,272,200,130,14,"#cfd8dc")+R(350,292,70,50,8,"#b3e5fc")+R(440,292,70,50,8,"#b3e5fc")+
+ R(560,240,6,160,2,"#616161")+P("M566 244 L610 256 L566 268 Z","#4caf50")+
+ P("M200 400 L660 400 Q640 470 580 482 L260 482 Q220 460 200 400 Z","#1e88e5")+
+ R(220,420,420,18,4,"#fafafa")+
+ C(290,450,20,"#ff7043")+C(290,450,9,"#ffffff")+
+ P("M660 420 Q720 440 760 425 Q720 460 660 455 Z","#e1f5fe")+
+ fishS(150,560,"#ffb300",1,.7)},
+
+/* ===== BAUERNHOF ===== */
+{id:"kuh",cat:"hof",name:"Kuh",svg:
+ sky("#aee2ff")+sun(250,80)+cloud(520,85)+bird(380,120)+bird(420,100)+
+ P("M-20 400 Q200 320 420 390 T820 360 V620 H-20 Z","#9ccc65")+
+ P("M700 380 L700 300 L745 262 L790 300 L790 380 Z","#e57373")+R(728,330,34,50,4,"#8d6e63")+
+ R(80,250,30,170,8,"#8d6e63")+
+ C(55,215,48,"#66bb6a")+C(135,215,48,"#66bb6a")+C(95,170,55,"#66bb6a")+
+ apple(60,215)+apple(120,190)+apple(140,235)+apple(90,150)+
+ R(-20,370,840,18,4,"#bcaaa4")+R(-20,412,840,18,4,"#bcaaa4")+
+ R(40,340,26,120,6,"#a1887f")+R(160,340,26,120,6,"#a1887f")+R(670,340,26,120,6,"#a1887f")+
+ PF("M-20 470 Q250 440 500 470 T820 465 V620 H-20 Z","#8bc34a")+
+ flower(640,545)+flower(730,525,"#ffb74d")+flower(90,560,"#ce93d8")+tuft(180,575)+tuft(560,580)+
+ N("M225 330 Q180 370 190 425")+E(190,440,14,20,"#795548")+
+ R(300,420,42,110,14,"#ffcc80")+R(480,420,42,110,14,"#ffcc80")+
+ R(300,505,42,25,8,"#5d4037")+R(480,505,42,25,8,"#5d4037")+
+ E(410,452,40,22,"#f8bbd0")+
+ R(220,280,330,170,75,"#ffe0b2")+
+ E(300,330,40,28,"#795548")+E(430,322,30,32,"#795548")+E(480,402,30,24,"#795548")+E(250,405,18,14,"#795548")+
+ R(250,430,45,105,14,"#ffe0b2")+R(450,430,45,105,14,"#ffe0b2")+
+ R(250,510,45,25,8,"#5d4037")+R(450,510,45,25,8,"#5d4037")+
+ E(538,232,34,16,"#ffe0b2")+E(672,232,34,16,"#ffe0b2")+E(540,232,18,8,"#f8bbd0")+E(670,232,18,8,"#f8bbd0")+
+ P("M568 218 Q560 186 580 172 Q580 200 592 214 Z","#fff8e1")+P("M642 218 Q650 186 630 172 Q630 200 618 214 Z","#fff8e1")+
+ P("M528 386 L566 386 L572 416 L522 416 Z","#ffca28")+C(547,422,6,"#8d6e63")+
+ E(605,275,65,70,"#ffe0b2")+E(585,245,22,18,"#795548")+
+ E(605,340,60,38,"#f8bbd0")+K(585,340,7,10)+K(625,340,7,10)+N("M590 362 Q605 370 620 362")+
+ eye(580,282,13)+eye(630,282,13)},
+
+{id:"schwein",cat:"hof",name:"Schwein",svg:
+ sky("#aee2ff")+sun(600,80)+cloud(110,95)+
+ R(-20,390,240,16,4,"#bcaaa4")+R(-20,425,240,16,4,"#bcaaa4")+R(30,360,24,110,6,"#a1887f")+R(150,360,24,110,6,"#a1887f")+
+ ground("#9ccc65")+
+ R(735,270,30,190,8,"#8d6e63")+C(720,250,45,"#66bb6a")+C(780,250,45,"#66bb6a")+C(750,205,52,"#66bb6a")+
+ apple(725,240)+apple(770,215)+apple(785,265)+
+ E(320,540,240,45,"#8d6e63")+N("M150 545 q20 -10 40 0 M400 552 q20 -10 40 0")+
+ flower(690,545)+flower(760,520,"#ce93d8")+tuft(620,575)+tuft(40,590)+
+ butterfly(460,170,"#4fc3f7")+
+ N("M210 360 q-35 -10 -30 -35 q5 -20 20 -10 q10 10 -5 20")+
+ R(270,430,50,92,18,"#f06292")+R(440,430,50,92,18,"#f06292")+
+ R(270,505,50,17,7,"#ad1457")+R(440,505,50,17,7,"#ad1457")+
+ E(370,380,165,105,"#f48fb1")+
+ E(330,432,26,14,"#8d6e63")+E(290,360,16,10,"#8d6e63")+E(420,310,14,9,"#8d6e63")+
+ N("M330 300 Q360 290 390 300")+
+ R(240,440,55,92,18,"#f48fb1")+R(410,445,55,92,18,"#f48fb1")+
+ R(240,515,55,17,7,"#c2185b")+R(410,520,55,17,7,"#c2185b")+
+ P("M500 272 L512 200 L562 250 Z","#f48fb1")+P("M598 250 L645 198 L652 276 Z","#f48fb1")+
+ P("M514 255 L520 222 L545 248 Z","#f8bbd0")+P("M612 248 L638 220 L640 260 Z","#f8bbd0")+
+ C(570,330,90,"#f48fb1")+
+ E(520,360,15,10,"#f06292")+E(618,385,13,9,"#f06292")+
+ E(640,350,42,32,"#f06292")+K(628,350,6,10)+K(652,350,6,10)+
+ eye(545,305,13)+eye(600,298,13)+N("M560 384 Q585 398 607 384")},
+
+{id:"traktor",cat:"hof",name:"Traktor",svg:
+ sky("#aee2ff")+sun(110,90)+cloud(640,110)+bird(300,80)+bird(340,60)+
+ P("M-20 380 Q300 340 820 380 V620 H-20 Z","#c5e1a5")+
+ N("M-20 405 Q300 375 820 405 M-20 432 Q300 405 820 432 M-20 458 Q300 432 820 458")+
+ ground("#8bc34a",485)+tuft(80,560)+tuft(730,575)+tuft(430,580)+
+ R(690,430,90,60,14,"#ffe082")+N("M700 448 h70 M700 470 h70")+
+ C(548,150,18,"#eceff1")+C(578,118,24,"#eceff1")+C(620,92,30,"#eceff1")+
+ R(520,190,22,100,4,"#9e9e9e")+R(514,180,34,16,5,"#616161")+
+ R(430,290,240,120,20,"#e53935")+
+ N("M600 312 V388 M620 312 V388 M640 312 V388")+
+ R(450,305,110,40,10,"#ef9a9a")+
+ R(220,168,232,24,10,"#b71c1c")+
+ P("M230 410 L230 200 Q230 180 250 180 L420 180 Q440 180 440 200 L440 410 Z","#e53935")+
+ R(260,205,150,110,14,"#b3e5fc")+
+ N("M290 230 L320 215 M300 260 L345 236")+
+ N("M360 315 L385 270")+E(388,266,24,7,"#616161")+
+ R(395,345,30,10,4,"#616161")+
+ C(660,322,16,"#fff59d")+
+ R(220,395,460,30,10,"#b71c1c")+
+ treads(300,450,108,16)+C(300,450,110,"#424242")+C(300,450,75,"#616161")+C(300,450,55,"#ffca28")+C(300,450,15,"#9e9e9e")+
+ C(270,425,6,"#9e9e9e")+C(330,425,6,"#9e9e9e")+C(270,475,6,"#9e9e9e")+C(330,475,6,"#9e9e9e")+
+ treads(600,480,68,12)+C(600,480,70,"#424242")+C(600,480,32,"#ffca28")+C(600,480,10,"#9e9e9e")},
+
+{id:"huhn",cat:"hof",name:"Huhn",svg:
+ sky("#aee2ff")+sun(600,80)+cloud(380,70)+
+ P("M60 470 L60 260 L180 180 L300 260 L300 470 Z","#c62828")+
+ N("M60 300 H300 M60 340 H130 M230 340 H300 M60 380 H130 M230 380 H300 M60 420 H130 M230 420 H300")+
+ P("M40 275 L180 160 L320 275 L300 288 L180 192 L60 288 Z","#5d4037")+
+ R(130,350,100,120,6,"#8d6e63")+N("M130 350 L230 470 M230 350 L130 470")+
+ R(155,250,50,45,6,"#ffe082")+N("M180 250 V295")+
+ ground("#9ccc65")+
+ R(745,310,10,190,4,"#43a047")+P("M750 420 Q790 400 795 430 Q770 440 750 430 Z","#66bb6a")+P("M750 380 Q712 360 705 392 Q730 400 750 392 Z","#66bb6a")+
+ [0,45,90,135,180,225,270,315].map(a=>{const t=a*Math.PI/180;return C((750+Math.cos(t)*32).toFixed(1),(300+Math.sin(t)*32).toFixed(1),16,"#ffca28");}).join("")+C(750,300,24,"#8d6e63")+
+ tuft(320,575)+tuft(600,590)+
+ P("M100 512 Q180 485 260 512 Q180 525 100 512 Z","#d7a65a")+
+ egg(150,498)+egg(205,494,"#ffe0b2")+
+ P("M95 512 Q180 560 265 512 Q260 548 180 556 Q100 548 95 512 Z","#c8963e")+N("M120 530 Q180 545 240 530")+
+ R(470,455,14,62,5,"#ff9800")+R(520,455,14,62,5,"#ff9800")+
+ N("M477 517 l-18 10 M477 517 l18 10 M527 517 l-18 10 M527 517 l18 10")+
+ P("M330 300 Q300 220 350 200 Q360 260 395 300 Z","#ff8a65")+
+ P("M350 330 Q285 285 300 232 Q350 275 395 320 Z","#ffa726")+
+ P("M360 350 Q290 330 290 280 Q340 310 398 335 Z","#e57373")+
+ E(480,370,130,100,"#ffcc80")+
+ P("M420 350 Q470 320 540 345 Q520 420 440 410 Q410 390 420 350 Z","#ffa726")+
+ N("M440 365 Q480 360 520 368 M440 385 Q475 382 510 390")+
+ P("M555 230 q5 -35 30 -25 q15 -30 35 -5 q25 -15 30 20 Z","#e53935")+
+ E(640,315,12,18,"#e53935")+
+ C(590,270,55,"#ffcc80")+
+ P("M640 262 L690 278 L640 294 Z","#ffc107")+N("M642 278 L680 278")+eye(603,258,12)+
+ E(370,520,38,32,"#fff176")+E(360,522,18,12,"#ffee58")+C(398,482,24,"#fff176")+P("M418 478 L438 486 L418 494 Z","#ff9800")+K(404,476,4,4)+
+ E(690,525,38,32,"#fff176")+E(680,527,18,12,"#ffee58")+C(718,487,24,"#fff176")+P("M738 483 L758 491 L738 499 Z","#ff9800")+K(724,481,4,4)}
+];
+
+/* ---------- SVG -> Bild ---------- */
+const DEFS=`<defs><filter id="cel" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="-9" dy="-10" result="o1"/><feComposite in="SourceAlpha" in2="o1" operator="out" result="e1"/><feFlood flood-color="#20173a" flood-opacity=".22"/><feComposite in2="e1" operator="in" result="sh"/><feOffset in="SourceAlpha" dx="6" dy="7" result="o2"/><feComposite in="SourceAlpha" in2="o2" operator="out" result="e2"/><feFlood flood-color="#ffffff" flood-opacity=".32"/><feComposite in2="e2" operator="in" result="hi"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge></filter><pattern id="dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="2.4" fill="#ffffff" fill-opacity=".28"/></pattern></defs>`;
+function doc(s,mode,w,h){
+  const css = mode==="color"
+    ? "*{stroke:none!important}path,ellipse,rect,circle{filter:url(#cel)}.f,.k,.h,.n,.s,pattern *{filter:none!important}"
+    : `*{fill:#fff!important}.k{fill:${LINE}!important}.n{fill:none!important;stroke-width:5px}.h{stroke:none!important}.s{display:none!important}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="${w}" height="${h}">${DEFS}<style>${css}</style><g stroke="${LINE}" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">${s.svg}</g></svg>`;
+}
+
+function img(svg){
+  return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);});
+}
+
+/* ---------- Speichern (bleibt nach dem Neuladen) ---------- */
+let dbP=null;
+function db(){
+  if(!dbP)dbP=new Promise((res,rej)=>{try{const r=indexedDB.open("zaubermalbuch",1);r.onupgradeneeded=()=>r.result.createObjectStore("bilder");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});
+  return dbP;
+}
+async function idb(mode,fn){
+  try{const d=await db();return await new Promise((res,rej)=>{const t=d.transaction("bilder",mode);const r=fn(t.objectStore("bilder"));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);});}catch(_){return null;}
+}
+const save=(k,v)=>idb("readwrite",s=>s.put(v,k));
+const forget=k=>idb("readwrite",s=>s.delete(k));
+const load=k=>idb("readonly",s=>s.get(k));
+
+/* ---------- Elemente ---------- */
+const $=id=>document.getElementById(id);
+const home=$("home"),paint=$("paint"),pc=$("pc"),lc=$("lc"),sheet=$("sheet"),wrap=$("wrap"),nameEl=$("name"),nextBtn=$("next");
+const pctx=pc.getContext("2d"),lctx=lc.getContext("2d",{willReadFrequently:true});
+const colorC=document.createElement("canvas");colorC.width=W;colorC.height=H;const cctx=colorC.getContext("2d");
+const probe=document.createElement("canvas");probe.width=80;probe.height=60;const prctx=probe.getContext("2d",{willReadFrequently:true});
+
+const state=scenes.map(()=>({p:null,has:false,done:false}));
+const thumbs=[],thumbLine=[],thumbSrc=[];
+let cur=-1,token=0,ready=false,pattern=null;
+
+/* ---------- Startseite ---------- */
+const STAR='<svg class="star" viewBox="0 0 40 40"><path d="M20 3 L25 15 L38 15.5 L28 24 L31.5 37 L20 29.5 L8.5 37 L12 24 L2 15.5 L15 15 Z" fill="currentColor" stroke="#1f2b55" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+scenes.forEach((s,i)=>{
+  const b=document.createElement("button");b.className="thumb";b.id="t-"+s.id;b.setAttribute("aria-label",s.name+" ausmalen");
+  const c=document.createElement("canvas");c.width=TW;c.height=TH;
+  b.appendChild(c);
+  b.insertAdjacentHTML("beforeend",`<span class="label">${s.name}</span>`);
+  b.addEventListener("click",()=>openScene(i));
+  document.querySelector(`.grid[data-cat="${s.cat}"]`).appendChild(b);
+  thumbs[i]=c;
+  img(doc(s,"line",TW,TH)).then(im=>{thumbLine[i]=im;drawThumb(i,thumbSrc[i]);});
+  load(s.id).then(v=>{
+    if(!v||!v.blob||cur===i)return;
+    const st=state[i];st.has=true;st.done=!!v.done;st.p=Promise.resolve(v.blob);
+    createImageBitmap(v.blob).then(bm=>{thumbSrc[i]=bm;drawThumb(i,bm);}).catch(()=>{});
+  });
+});
+function drawThumb(i,src){
+  const c=thumbs[i],x=c.getContext("2d"),li=thumbLine[i];
+  x.globalCompositeOperation="source-over";x.fillStyle="#fff";x.fillRect(0,0,TW,TH);
+  if(src)x.drawImage(src,0,0,TW,TH);
+  if(li){x.globalCompositeOperation="multiply";x.drawImage(li,0,0,TW,TH);x.globalCompositeOperation="source-over";}
+  const btn=c.parentNode,old=btn.querySelector(".star");
+  if(state[i].done&&!old)btn.insertAdjacentHTML("beforeend",STAR);
+  if(!state[i].done&&old)old.remove();
+}
+
+/* ---------- Ansicht wechseln ---------- */
+function showPaint(){home.hidden=true;paint.hidden=false;fit();wake();}
+function showHome(){paint.hidden=true;home.hidden=false;}
+function snapshot(i){
+  const st=state[i],id=scenes[i].id;
+  if(!st.has){st.p=null;forget(id);return;}
+  st.p=new Promise(r=>pc.toBlob(r,"image/png"));
+  st.p.then(b=>{if(b)save(id,{blob:b,done:st.done});});
+}
+function leave(){
+  if(cur<0||!ready)return;
+  thumbSrc[cur]=null;
+  drawThumb(cur,state[cur].has?pc:null);
+  snapshot(cur);
+}
+async function openScene(i){
+  leave();
+  cur=i;const my=++token,s=scenes[i],st=state[i];
+  ready=false;
+  nameEl.textContent=s.name;
+  nextBtn.classList.toggle("pulse",st.done);
+  pctx.clearRect(0,0,W,H);lctx.clearRect(0,0,W,H);
+  showPaint();
+  try{
+    const [ci,li]=await Promise.all([img(doc(s,"color",W,H)),img(doc(s,"line",W,H))]);
+    if(my!==token)return;
+    cctx.clearRect(0,0,W,H);cctx.drawImage(ci,0,0,W,H);
+    lctx.clearRect(0,0,W,H);lctx.drawImage(li,0,0,W,H);lineArt();
+    pattern=pctx.createPattern(colorC,"no-repeat");
+    if(st.p){
+      const blob=await st.p;if(my!==token)return;
+      if(blob){const bm=await createImageBitmap(blob);if(my!==token)return;pctx.drawImage(bm,0,0);}
+    }
+    ready=true;
+  }catch(e){console.error(e);}
+}
+function lineArt(){
+  const d=lctx.getImageData(0,0,W,H),p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    const m=Math.min(p[i],p[i+1],p[i+2]);let a=(255-m)*1.15;
+    p[i]=29;p[i+1]=26;p[i+2]=38;p[i+3]=a>255?255:a;
+  }
+  lctx.putImageData(d,0,0);
+}
+$("homeBtn").addEventListener("click",()=>{leave();cur=-1;token++;ready=false;showHome();});
+$("prev").addEventListener("click",()=>openScene((cur+scenes.length-1)%scenes.length));
+nextBtn.addEventListener("click",()=>openScene((cur+1)%scenes.length));
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&cur>=0&&ready)snapshot(cur);});
+
+/* Neu anfangen: gedrückt halten */
+const clearBtn=$("clearBtn");let holdT=null;
+clearBtn.addEventListener("pointerdown",e=>{
+  e.preventDefault();clearBtn.classList.add("holding");
+  holdT=setTimeout(()=>{
+    clearBtn.classList.remove("holding");
+    if(cur<0)return;
+    pctx.clearRect(0,0,W,H);
+    const st=state[cur];st.has=false;st.done=false;st.p=null;forget(scenes[cur].id);
+    nextBtn.classList.remove("pulse");drawThumb(cur,null);
+  },900);
+});
+["pointerup","pointerleave","pointercancel"].forEach(t=>clearBtn.addEventListener(t,()=>{clearTimeout(holdT);clearBtn.classList.remove("holding");}));
+
+/* ---------- Vollbild ---------- */
+const fsHelp=$("fsHelp");
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+function fsState(){document.body.classList.toggle("fs-on",!!fsEl());setTimeout(()=>{fit();sizeFx();},120);}
+document.addEventListener("fullscreenchange",fsState);
+document.addEventListener("webkitfullscreenchange",fsState);
+function toggleFS(){
+  const d=document,el=d.documentElement;
+  try{
+    if(fsEl()){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return;}
+    const req=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(!req)throw new Error("none");
+    const r=req.call(el);
+    if(r&&r.catch)r.catch(()=>{fsHelp.hidden=false;});
+    setTimeout(()=>{if(!fsEl())fsHelp.hidden=false;},700);
+  }catch(_){fsHelp.hidden=false;}
+}
+document.querySelectorAll(".fsBtn").forEach(b=>b.addEventListener("click",toggleFS));
+$("fsOk").addEventListener("click",()=>{fsHelp.hidden=true;});
+
+/* ---------- Blattgröße ---------- */
+function fit(){
+  const r=wrap.getBoundingClientRect();if(!r.width||!r.height)return;
+  let w=r.width,h=w*3/4;if(h>r.height){h=r.height;w=h*4/3;}
+  sheet.style.width=Math.floor(w)+"px";sheet.style.height=Math.floor(h)+"px";
+}
+if(window.ResizeObserver)new ResizeObserver(fit).observe(wrap);
+addEventListener("resize",()=>{fit();sizeFx();});
+
+/* ---------- Malen ---------- */
+const active=new Map();let lastPen=0,rect=null,sparkN=0,checkT=null;
+function pos(e){return{x:(e.clientX-rect.left)*W/rect.width,y:(e.clientY-rect.top)*H/rect.height};}
+pc.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  audioInit();
+  if(!ready)return;
+  const now=performance.now();
+  if(e.pointerType==="pen"){
+    lastPen=now;
+    for(const [id,v] of active)if(v.type==="touch")active.delete(id); // Handballen ignorieren
+  }else if(e.pointerType==="touch"&&now-lastPen<1500)return;
+  try{pc.setPointerCapture(e.pointerId);}catch(_){}
+  rect=pc.getBoundingClientRect();
+  const p=pos(e);active.set(e.pointerId,{x:p.x,y:p.y,type:e.pointerType});
+  pctx.fillStyle=pattern;pctx.beginPath();pctx.arc(p.x,p.y,BRUSH/2,0,Math.PI*2);pctx.fill();
+  state[cur].has=true;sparkle(e.clientX,e.clientY,3);
+});
+pc.addEventListener("pointermove",e=>{
+  const a=active.get(e.pointerId);if(!a||!ready)return;
+  if(a.type==="pen")lastPen=performance.now();
+  const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
+  pctx.strokeStyle=pattern;pctx.lineWidth=BRUSH;pctx.lineCap="round";pctx.lineJoin="round";
+  pctx.beginPath();pctx.moveTo(a.x,a.y);
+  for(const ev of evs){const p=pos(ev);pctx.lineTo(p.x,p.y);a.x=p.x;a.y=p.y;}
+  pctx.stroke();
+  if(++sparkN%3===0)sparkle(e.clientX,e.clientY,1);
+});
+function end(e){
+  if(!active.delete(e.pointerId))return;
+  clearTimeout(checkT);checkT=setTimeout(check,250);
+}
+pc.addEventListener("pointerup",end);pc.addEventListener("pointercancel",end);
+
+function check(){
+  if(cur<0||!ready||state[cur].done)return;
+  prctx.clearRect(0,0,80,60);prctx.drawImage(pc,0,0,80,60);
+  const d=prctx.getImageData(0,0,80,60).data;let n=0;
+  for(let i=3;i<d.length;i+=4)if(d[i]>30)n++;
+  if(n/(80*60)>0.86)finish();
+}
+function finish(){
+  const st=state[cur];st.done=true;
+  let k=0;const my=token,i=cur;
+  (function step(){
+    if(my!==token)return;
+    k++;pctx.globalAlpha=k<16?0.14:1;pctx.drawImage(colorC,0,0);pctx.globalAlpha=1;
+    if(k<16)requestAnimationFrame(step);else snapshot(i);
+  })();
+  confetti();chime();nextBtn.classList.add("pulse");
+}
+
+/* iPad: Zoomen und Wackeln verhindern */
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("touchmove",e=>{if(!paint.hidden&&fsHelp.hidden)e.preventDefault();},{passive:false});
+
+/* ---------- Glitzer & Konfetti ---------- */
+const fx=$("fx"),fctx=fx.getContext("2d");let dpr=1,parts=[],running=false;
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function sizeFx(){dpr=Math.min(2,devicePixelRatio||1);fx.width=innerWidth*dpr;fx.height=innerHeight*dpr;}
+sizeFx();
+const SPARK=["#fff6c2","#ffffff","#ffe27a"],CONF=["#ffc83d","#ef5350","#4caf50","#29b6f6","#ec407a","#9575cd","#ff9800"];
+function sparkle(x,y,n){
+  if(reduce)return;
+  for(let i=0;i<n;i++)parts.push({x:x+(Math.random()-.5)*30,y:y+(Math.random()-.5)*30,vx:(Math.random()-.5)*1.2,vy:-Math.random()*1.5,life:1,dec:.03+Math.random()*.02,s:5+Math.random()*7,c:SPARK[i%3],k:0,r:0,vr:0});
+  run();
+}
+function confetti(){
+  const n=reduce?30:140;
+  for(let i=0;i<n;i++)parts.push({x:Math.random()*innerWidth,y:-20-Math.random()*innerHeight*.5,vx:(Math.random()-.5)*2,vy:2+Math.random()*3,life:1,dec:.004,s:8+Math.random()*10,c:CONF[i%CONF.length],k:i%3===0?0:1,r:Math.random()*6,vr:(Math.random()-.5)*.2});
+  run();
+}
+function star4(x,y,s){fctx.beginPath();fctx.moveTo(x,y-s);fctx.quadraticCurveTo(x,y,x+s,y);fctx.quadraticCurveTo(x,y,x,y+s);fctx.quadraticCurveTo(x,y,x-s,y);fctx.quadraticCurveTo(x,y,x,y-s);fctx.fill();}
+function run(){if(running)return;running=true;requestAnimationFrame(tick);}
+function tick(){
+  fctx.setTransform(dpr,0,0,dpr,0,0);fctx.clearRect(0,0,innerWidth,innerHeight);
+  parts=parts.filter(p=>p.life>0&&p.y<innerHeight+40);
+  for(const p of parts){
+    p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;p.r+=p.vr;
+    fctx.globalAlpha=Math.max(0,Math.min(1,p.life));fctx.fillStyle=p.c;
+    if(p.k===0)star4(p.x,p.y,p.s*(p.dec>.01?p.life:1));
+    else{fctx.save();fctx.translate(p.x,p.y);fctx.rotate(p.r);fctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);fctx.restore();}
+  }
+  fctx.globalAlpha=1;
+  if(parts.length)requestAnimationFrame(tick);else{running=false;fctx.clearRect(0,0,innerWidth,innerHeight);}
+}
+
+/* ---------- Klang ---------- */
+let ac=null;
+function audioInit(){try{if(!ac){const A=window.AudioContext||window.webkitAudioContext;if(A)ac=new A();}if(ac&&ac.state==="suspended")ac.resume();}catch(_){}}
+function chime(){
+  if(!ac)return;
+  [523.25,659.25,783.99,1046.5].forEach((f,i)=>{
+    const t=ac.currentTime+i*.13,o=ac.createOscillator(),g=ac.createGain();
+    o.type="triangle";o.frequency.value=f;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.6);
+    o.connect(g).connect(ac.destination);o.start(t);o.stop(t+.65);
+  });
+}
+
+/* Bildschirm wach halten */
+let lock=null;
+async function wake(){try{if(navigator.wakeLock&&!lock){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>lock=null);}}catch(_){}}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!paint.hidden)wake();});
+})();
+</script>
+
+<script>
+(function(){
+  var sa=window.navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||(window.matchMedia&&matchMedia("(display-mode: fullscreen)").matches);
+  if(sa)document.documentElement.classList.add("standalone");
+  if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+})();
+</script>
+</body>
+</html>
