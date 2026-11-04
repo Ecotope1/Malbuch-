@@ -16,7 +16,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap">
 <style>
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-[hidden]{display:none!important}
 img{max-width:100%}
 html.standalone .fsBtn{display:none}
 /* Layout: Startseite mit Bildergalerie pro Thema; Malansicht = ein großes Blatt, Riesen-Tasten außenrum */
@@ -34,6 +33,7 @@ html.standalone .fsBtn{display:none}
   color-scheme:light;
 }
 html,body{height:100%}
+[hidden]{display:none!important}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
 body{
@@ -99,6 +99,11 @@ h2 i{display:inline-block;width:14px;height:14px;border-radius:50%;background:va
 @media (prefers-reduced-motion:reduce){.pulse{animation:none;outline:5px solid var(--light)}}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
 
+#home header > .hbtns{display:flex;flex-direction:row;gap:16px;align-items:flex-start;flex:none}
+.hold{display:flex;flex-direction:column;align-items:center;gap:12px}
+.hold span{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
+.btn.slow.holding .ring circle{transition:stroke-dashoffset 2s linear}
+.toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--paper);color:var(--ink);font-weight:800;font-size:20px;padding:12px 24px 10px;border-radius:999px;box-shadow:0 6px 0 var(--bg-deep);z-index:25}
 /* Hinweis, wenn Vollbild gesperrt ist */
 .overlay{position:fixed;inset:0;z-index:30;background:rgba(20,30,70,.6);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));touch-action:pan-y}
 .card{background:var(--paper);color:var(--ink);border-radius:24px;padding:24px 26px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 0 var(--bg-deep)}
@@ -117,16 +122,26 @@ h2 i{display:inline-block;width:14px;height:14px;border-radius:50%;background:va
       <h1>Zauber<span>malbuch</span></h1>
       <p>Bild antippen, dann einfach drauflos kritzeln. Die Farbe kommt von allein.</p>
     </div>
-    <button class="btn fsBtn" aria-label="Vollbild">
+    <div class="hbtns">
+      <div class="hold">
+        <button class="btn slow" id="resetAll" aria-label="Gedrückt halten: alle Bilder löschen">
+          <svg class="ic" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M7 11 H33"/><path d="M15 11 V7 H25 V11"/><path d="M10 11 L12 34 H28 L30 11"/><path d="M17 17 V28 M23 17 V28"/></svg>
+          <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45"/></svg>
+        </button>
+        <span>Alles neu: 2 Sek. halten</span>
+      </div>
+      <button class="btn fsBtn" aria-label="Vollbild">
       <svg class="ic i-enter" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 15 V6 H15 M25 6 H34 V15 M34 25 V34 H25 M15 34 H6 V25"/></svg>
       <svg class="ic i-exit" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M15 6 V15 H6 M34 15 H25 V6 M25 34 V25 H34 M6 25 H15 V34"/></svg>
     </button>
+    </div>
   </header>
   <section><h2><i></i>Dinos</h2><div class="grid" data-cat="dino"></div></section>
   <section><h2><i></i>Meerestiere</h2><div class="grid" data-cat="meer"></div></section>
   <section><h2><i></i>Vulkane &amp; Natur</h2><div class="grid" data-cat="natur"></div></section>
   <section><h2><i></i>Flugzeuge &amp; Hubschrauber</h2><div class="grid" data-cat="flug"></div></section>
   <section><h2><i></i>Polizei &amp; Feuerwehr</h2><div class="grid" data-cat="blau"></div></section>
+  <section><h2><i></i>Baustelle &amp; Fahrzeuge</h2><div class="grid" data-cat="bau"></div></section>
   <section><h2><i></i>Bauernhof</h2><div class="grid" data-cat="hof"></div></section>
 </div>
 
@@ -173,6 +188,8 @@ h2 i{display:inline-block;width:14px;height:14px;border-radius:50%;background:va
     <button class="ok" id="fsOk">Verstanden</button>
   </div>
 </div>
+
+<div id="toast" class="toast" hidden>Alle Bilder sind wieder leer</div>
 
 <canvas id="fx"></canvas>
 
@@ -804,6 +821,470 @@ const scenes=[
  E(690,525,38,32,"#fff176")+E(680,527,18,12,"#ffee58")+C(718,487,24,"#fff176")+P("M738 483 L758 491 L738 499 Z","#ff9800")+K(724,481,4,4)}
 ];
 
+/* ---------- Zusatz-Bausteine ---------- */
+const T=(x,y,s,rot,inner,cx,cy)=>`<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s}) translate(${-cx} ${-cy})" stroke-width="${(8/s).toFixed(2)}">${inner}</g>`;
+const fern=(x,y)=>P(`M${x} ${y} Q${x-50} ${y-60} ${x-80} ${y-50} Q${x-40} ${y-30} ${x} ${y} Z`,"#43a047")+P(`M${x} ${y} Q${x+50} ${y-60} ${x+80} ${y-50} Q${x+40} ${y-30} ${x} ${y} Z`,"#43a047")+P(`M${x} ${y} Q${x-15} ${y-80} ${x+5} ${y-110} Q${x+20} ${y-70} ${x} ${y} Z`,"#66bb6a");
+const pine=(x,y,c="#2e7d32")=>R(x-7,y-4,14,24,3,"#8d6e63")+P(`M${x} ${y-110} L${x+42} ${y} L${x-42} ${y} Z`,c);
+const house=(x,y,w,c,roof)=>R(x,y-w*.8,w,w*.8,4,c)+P(`M${x-10} ${y-w*.8+4} L${x+w/2} ${y-w*1.3} L${x+w+10} ${y-w*.8+4} Z`,roof)+R(x+w*.38,y-w*.4,w*.24,w*.4,3,"#8d6e63")+R(x+w*.12,y-w*.66,w*.2,w*.18,3,"#fff59d");
+const ptero=(w="#ab47bc",b="#ba68c8",bl="#e1bee7",cr="#ff7043")=>
+ P("M385 300 Q260 190 95 225 Q160 255 190 300 Q240 285 285 325 Q330 312 385 332 Z",w)+N("M380 300 Q280 232 160 234")+
+ P("M440 300 Q560 180 725 200 Q655 245 640 290 Q585 282 540 325 Q495 312 440 332 Z",w)+N("M445 300 Q560 232 662 216")+
+ P("M395 345 L385 380 L400 382 L408 348 Z",b)+P("M420 345 L415 382 L430 382 L432 348 Z",b)+
+ E(412,320,46,32,b)+E(412,336,26,15,bl)+
+ P("M468 266 Q430 225 402 218 Q442 252 456 280 Z",cr)+
+ P("M440 292 Q468 250 520 255 L606 270 Q565 286 522 293 Q482 312 450 316 Z",b)+
+ eye(492,274,12)+N("M522 287 L592 273");
+const shark=(b,bl,fin,extra="")=>
+ P("M150 310 L55 195 Q95 290 75 310 Q95 335 55 420 Z",b)+
+ P("M380 218 L425 110 L485 214 Z",b)+P("M240 262 L252 232 L278 258 Z",b)+
+ P("M120 300 Q250 200 480 210 Q640 220 722 298 Q650 362 480 380 Q300 392 145 332 Z",b)+
+ P("M190 330 Q340 380 480 378 Q610 370 705 318 Q600 345 480 350 Q320 350 190 330 Z",bl)+extra+
+ P("M600 322 Q665 342 712 304 Q690 345 640 354 Q610 352 600 322 Z","#e57373")+
+ tooth(612,324)+tooth(632,329)+tooth(652,330)+tooth(672,325)+tooth(690,316)+
+ N("M560 268 Q550 300 560 330 M580 266 Q570 300 580 330 M600 268 Q590 300 600 326")+
+ P("M430 362 Q420 445 355 475 Q400 405 400 364 Z",fin)+
+ eye(642,262,12)+N("M622 243 Q642 234 660 244");
+const seahorse=(c,c2)=>
+ P("M372 282 Q318 268 312 312 Q328 336 366 330 Z",c2)+N("M366 292 L322 300 M366 306 L320 316 M366 320 L330 328")+
+ P("M402 385 Q360 440 378 490 Q400 532 446 515 Q482 494 462 464 Q444 444 424 458 Q414 474 432 482 L424 496 Q398 486 405 455 Q420 428 455 438 Q500 460 482 505 Q456 548 404 536 Q344 520 350 460 Q356 420 378 380 Z",c)+
+ P("M380 200 Q348 270 368 340 Q384 392 430 396 Q482 386 486 320 Q482 260 450 208 Z",c)+
+ P("M398 230 Q380 300 400 370 Q430 385 455 360 Q470 300 450 230 Z",c2)+
+ N("M400 262 Q428 270 456 258 M398 300 Q430 310 466 298 M404 340 Q432 350 462 336")+
+ P("M386 146 L392 112 L406 134 L420 104 L430 132 L442 116 L444 150 Z",c2)+
+ C(420,172,44,c)+
+ P("M446 156 L530 160 Q544 172 530 186 L450 194 Z",c)+
+ E(408,192,10,7,"#f8bbd0")+eye(424,165,13);
+const jelly=(c,c2)=>
+ [295,345,400,455,505].map(x=>P(`M${x-8} 300 Q${x-26} 360 ${x} 410 Q${x+26} 460 ${x} 520 L${x+15} 520 Q${x+42} 460 ${x+15} 410 Q${x-10} 360 ${x+8} 300 Z`,c2)).join("")+
+ P("M260 300 Q260 140 400 140 Q540 140 540 300 Q520 322 500 300 Q480 322 460 300 Q440 322 420 300 Q400 322 380 300 Q360 322 340 300 Q320 322 300 300 Q280 322 260 300 Z",c)+
+ C(320,205,13,c2)+C(470,190,10,c2)+C(400,170,8,c2)+C(500,250,9,c2)+
+ E(342,275,15,9,"#f8bbd0")+E(458,275,15,9,"#f8bbd0")+
+ eye(368,245,15)+eye(432,245,15)+N("M380 285 Q400 300 420 285");
+const env=(w,c)=>P(`M400 80 Q${400+w} 80 ${400+w} 230 Q${400+w} 320 ${(400+w*.31).toFixed(1)} 380 L${(400-w*.31).toFixed(1)} 380 Q${400-w} 320 ${400-w} 230 Q${400-w} 80 400 80 Z`,c);
+const balloon=(a,b,c)=>env(160,a)+env(108,b)+env(52,c)+N("M245 250 Q400 270 555 250")+
+ R(345,378,110,22,8,"#8d6e63")+N("M352 400 L365 452 M448 400 L435 452 M400 400 V452")+
+ C(400,442,20,"#bcaaa4")+C(384,424,8,"#bcaaa4")+C(416,424,8,"#bcaaa4")+K(393,440,3,3)+K(407,440,3,3)+E(400,450,7,5,"#d7ccc8")+
+ R(352,450,96,62,12,"#a1887f")+N("M352 472 H448 M352 492 H448 M376 450 V512 M400 450 V512 M424 450 V512");
+const band=(r1,r2,c)=>P(`M${400-r2} 470 A${r2} ${r2} 0 0 1 ${400+r2} 470 L${400+r1} 470 A${r1} ${r1} 0 0 0 ${400-r1} 470 Z`,c);
+const fluff=(cx,cy,rx,ry,n,c)=>{let d="";const r=(Math.PI*(rx+ry)/n*.62).toFixed(1);for(let i=0;i<=n;i++){const t=i/n*Math.PI*2,x=(cx+rx*Math.cos(t)).toFixed(1),y=(cy+ry*Math.sin(t)).toFixed(1);d+=i?`A${r} ${r} 0 0 1 ${x} ${y} `:`M${x} ${y} `;}return P(d+"Z",c);};
+const sheep=(w="#ffe0b2")=>
+ R(310,380,26,110,10,"#78909c")+R(470,380,26,110,10,"#78909c")+
+ fluff(400,340,150,85,14,w)+
+ R(340,385,26,110,10,"#78909c")+R(500,385,26,110,10,"#78909c")+
+ R(340,478,26,16,6,"#455a64")+R(500,478,26,16,6,"#455a64")+
+ E(548,300,26,14,"#78909c")+E(628,300,26,14,"#78909c")+
+ E(588,320,46,58,"#90a4ae")+fluff(588,262,36,18,8,w)+
+ eye(570,318,11)+eye(606,318,11)+E(588,352,18,12,"#b0bec5")+N("M580 360 Q588 366 596 360");
+const seabed=(c,y=525)=>sky(c)+rays()+sand(y);
+
+/* ---------- 30 neue Bilder ---------- */
+const scenes2=[
+/* Dinos */
+{id:"ankylo",cat:"dino",name:"Ankylosaurus",svg:
+ sky("#c8e6ff")+sun(110,90)+cloud(520,80)+
+ P("M520 460 L640 300 L760 460 Z","#b0bec5")+P("M610 340 L640 300 L672 342 L656 334 L640 348 L624 334 Z","#ffffff")+
+ ground("#c5e1a5")+
+ fern(70,500)+fern(745,520)+flower(150,560)+flower(690,565,"#ce93d8")+tuft(470,580)+tuft(250,590)+
+ P("M240 380 Q160 385 110 350 L118 330 Q170 360 236 352 Z","#a1887f")+
+ P("M62 318 L40 300 L76 306 Z","#fff8e1")+P("M90 302 L96 272 L112 302 Z","#fff8e1")+P("M58 356 L36 372 L72 368 Z","#fff8e1")+
+ C(80,335,34,"#8d6e63")+C(70,325,8,"#a1887f")+C(92,347,7,"#a1887f")+
+ R(270,395,55,90,20,"#6d4c41")+R(500,395,55,90,20,"#6d4c41")+
+ P("M215 410 Q215 245 400 240 Q590 245 600 410 Z","#a1887f")+
+ [250,300,350,400,450,500,550].map(x=>P(`M${x-14} 410 L${x} 440 L${x+14} 410 Z`,"#fff8e1")).join("")+
+ R(205,395,405,26,13,"#8d6e63")+
+ [[300,300],[370,288],[440,288],[510,300],[262,352],[332,346],[402,342],[472,346],[542,352]].map(([x,y])=>E(x,y,26,18,"#d7ccc8")).join("")+
+ [[340,264],[400,256],[460,264]].map(([x,y])=>P(`M${x-12} ${y+6} L${x} ${y-22} L${x+12} ${y+6} Z`,"#fff8e1")).join("")+
+ R(300,405,58,95,20,"#8d6e63")+R(530,405,58,95,20,"#8d6e63")+
+ nail(315,497)+nail(340,497)+nail(545,497)+nail(570,497)+
+ P("M600 332 L612 300 L630 326 Z","#fff8e1")+P("M652 322 L670 292 L682 324 Z","#fff8e1")+
+ E(650,372,72,48,"#a1887f")+E(694,388,30,22,"#bcaaa4")+
+ eye(640,356,14)+N("M682 404 Q700 408 716 398")+K(714,382,4,3)},
+
+{id:"dinobaby",cat:"dino",name:"Dino-Baby",svg:
+ sky("#ffe0b2")+sun(680,90)+cloud(90,80)+
+ P("M-20 430 L120 270 L160 270 L300 430 Z","#a1887f")+P("M120 270 Q140 255 160 270 L152 290 L140 280 L128 290 Z","#ff7043")+
+ ground("#aed581",440)+palm(700,500)+fern(90,520)+
+ P("M150 470 Q400 410 650 470 Q400 480 150 470 Z","#d7a65a")+
+ egg(215,455,"#e1f5fe")+egg(585,452,"#fff9c4")+
+ P("M330 430 Q320 320 400 300 Q480 320 470 430 Z","#81c784")+
+ E(400,240,90,70,"#81c784")+
+ P("M330 205 L352 218 L374 198 L398 218 L422 198 L446 218 L470 205 Q462 152 400 150 Q338 152 330 205 Z","#fff3e0")+C(375,176,6,"#ffcc80")+C(428,170,7,"#ffcc80")+
+ E(345,272,16,10,"#f8bbd0")+E(455,272,16,10,"#f8bbd0")+
+ eye(372,240,17)+eye(428,240,17)+N("M380 284 Q400 298 420 284")+K(392,264,3,3)+K(408,264,3,3)+
+ P("M262 395 L292 372 L322 398 L352 370 L382 398 L412 370 L442 398 L472 372 L502 398 L532 378 L540 395 Q545 535 400 540 Q258 535 262 395 Z","#fff3e0")+
+ C(320,450,10,"#ffcc80")+C(470,470,13,"#ffcc80")+C(400,500,8,"#ffcc80")+C(360,420,6,"#ffcc80")+
+ E(318,392,22,14,"#81c784")+E(482,392,22,14,"#81c784")+
+ P("M140 470 Q400 600 660 470 Q650 560 400 578 Q150 560 140 470 Z","#c8963e")+N("M170 500 Q400 560 630 500 M200 532 Q400 575 600 532")+
+ butterfly(610,250,"#4fc3f7")},
+
+{id:"sturzflug",cat:"dino",name:"Ptero-Sturzflug",svg:
+ sky("#9fdcf7")+sun(690,80)+cloud(120,70)+cloud(470,110)+
+ P("M-20 620 L-20 300 Q60 280 120 320 L180 620 Z","#a1887f")+P("M-20 300 Q60 280 120 320 L118 342 Q60 305 -20 324 Z","#8bc34a")+
+ sea("#29b6f6",440)+wave(250,505)+wave(420,565)+wave(150,560)+
+ N("M60 110 l60 42 M40 160 l60 42 M120 70 l55 38")+
+ T(430,270,.8,35,ptero(),412,300)+
+ P("M570 470 Q585 430 600 465 Q610 420 625 462 Q640 435 650 470 Z","#e1f5fe")+drop(585,408,"#e1f5fe")+drop(640,402,"#e1f5fe")+
+ fishS(650,500,"#ffb300",-1,.8)},
+
+{id:"pterofam",cat:"dino",name:"Ptero-Familie",svg:
+ sky("#ffcc80")+sun(400,140)+cloud(600,80)+cloud(50,150)+
+ P("M-20 470 L120 330 L220 470 Z","#a1887f")+P("M180 470 L330 300 L480 470 Z","#8d6e63")+P("M520 470 L650 340 L820 470 Z","#a1887f")+
+ sea("#4fc3f7",460)+wave(80,525)+wave(380,555)+wave(620,515)+
+ T(400,235,.85,-5,ptero(),412,300)+
+ T(165,400,.42,-10,ptero("#26a69a","#4db6ac","#b2dfdb","#ffca28"),412,300)+
+ T(640,395,.42,6,ptero("#ef5350","#e57373","#ffcdd2","#ffca28"),412,300)},
+
+{id:"spino",cat:"dino",name:"Spinosaurus",svg:
+ sky("#b2ebf2")+sun(110,80)+cloud(600,70)+
+ P("M560 440 L680 290 L800 440 Z","#90a4ae")+
+ ground("#9ccc65",420)+
+ P("M270 335 Q150 330 50 250 Q110 370 260 385 Z","#00897b")+
+ R(330,360,55,120,22,"#00796b")+
+ P("M270 310 Q300 150 410 135 Q520 150 545 310 Z","#ff7043")+N("M310 300 L330 190 M360 300 L370 160 M410 300 L410 145 M460 300 L455 160 M505 300 L490 195")+
+ E(410,330,150,70,"#26a69a")+E(450,355,80,32,"#b2dfdb")+
+ C(340,310,12,"#4db6ac")+C(390,300,9,"#4db6ac")+C(300,342,9,"#4db6ac")+
+ P("M520 300 Q560 240 620 240 L740 262 Q760 272 742 286 L640 302 Q600 330 560 345 Z","#26a69a")+
+ tooth(650,298)+tooth(675,294)+tooth(700,290)+
+ fishS(712,312,"#ffb300",1,.6)+
+ eye(612,258,13)+K(728,266,4,3)+
+ P("M540 340 Q575 352 590 378 L575 384 Q560 362 532 356 Z","#26a69a")+claw(586,378)+
+ R(440,375,58,110,22,"#26a69a")+
+ sea("#4fc3f7",450)+wave(100,505)+wave(380,545)+wave(600,505)+
+ P("M40 620 Q30 520 60 470 L70 472 Q50 530 56 620 Z","#43a047")+P("M90 620 Q100 530 80 460 L92 458 Q115 530 106 620 Z","#66bb6a")},
+
+/* Meer */
+{id:"tigerhai",cat:"meer",name:"Tigerhai",svg:
+ seabed("#0288d1",522)+
+ weed(20)+weed(90,"#66bb6a")+weed(725)+rock(560,528,150,"#90a4ae")+shell(300,568,"#ce93d8")+pebbles(420,570)+
+ fishS(680,110,"#ffeb3b",-1,.6)+fishS(740,150,"#ffeb3b",-1,.5)+
+ shark("#90a4ae","#eceff1","#78909c",[300,360,420,480,535].map(x=>P(`M${x} 240 L${x+16} 238 L${x+6} 290 L${x-8} 286 Z`,"#546e7a")).join(""))+
+ bub(150,140,12)+bub(120,100,17)},
+
+{id:"haifam",cat:"meer",name:"Haifamilie",svg:
+ seabed("#29b6f6",525)+
+ weed(700,"#66bb6a")+coral(60,525,"#ff8a65")+shell(520,570)+starP(330,566,.5)+pebbles(200,575)+
+ T(370,240,.75,0,shark("#78909c","#eceff1","#607d8b"),420,300)+
+ T(585,440,.4,-5,shark("#64b5f6","#e3f2fd","#42a5f5"),420,300)+
+ bub(720,170,12)+bub(745,130,17)+bub(150,440,10)},
+
+{id:"manta",cat:"meer",name:"Mantarochen",svg:
+ seabed("#01579b",530)+
+ coral(80,532,"#f06292")+coral(640,536,"#ff8a65")+starP(400,570,.5)+shell(250,576)+pebbles(520,575)+
+ N("M400 400 Q392 470 420 520")+
+ P("M400 200 Q300 215 110 330 Q250 335 320 380 Q370 410 400 410 Q430 410 480 380 Q550 335 690 330 Q500 215 400 200 Z","#3949ab")+
+ P("M360 212 Q338 186 350 158 Q366 186 380 206 Z","#3949ab")+P("M440 212 Q462 186 450 158 Q434 186 420 206 Z","#3949ab")+
+ E(310,292,46,22,"#7986cb")+E(490,292,46,22,"#7986cb")+E(400,330,32,44,"#5c6bc0")+
+ C(250,322,9,"#c5cae9")+C(550,322,9,"#c5cae9")+C(205,318,6,"#c5cae9")+C(595,318,6,"#c5cae9")+
+ eye(368,232,11)+eye(432,232,11)+N("M382 254 Q400 266 418 254")+
+ fishS(380,455,"#ffb300",1,.45)+fishS(450,478,"#ffb300",1,.4)+
+ bub(650,150,14)+bub(680,100,20)+bub(120,160,12)},
+
+{id:"seepferd",cat:"meer",name:"Seepferdchen",svg:
+ seabed("#26c6da",525)+
+ weed(250,"#66bb6a")+coral(610,528,"#f06292")+weed(720)+starP(130,560,.55)+shell(500,572)+pebbles(320,572)+
+ seahorse("#ffb300","#ff7043")+
+ T(640,250,.42,0,seahorse("#ba68c8","#f48fb1"),420,330)+
+ fishS(120,150,"#ef5350",1,.6)+bub(560,120,12)+bub(590,80,17)},
+
+{id:"qualle",cat:"meer",name:"Qualle",svg:
+ seabed("#1565c0",560)+
+ coral(60,560,"#ff8a65")+weed(700,"#66bb6a")+starP(560,580,.45)+pebbles(260,585)+
+ jelly("#f48fb1","#ce93d8")+
+ T(650,190,.4,12,jelly("#4dd0e1","#80deea"),400,330)+
+ T(140,230,.34,-10,jelly("#ffb74d","#ffe082"),400,330)+
+ fishS(660,420,"#ffeb3b",-1,.6)+bub(220,420,12)+bub(200,380,16)},
+
+{id:"krabbe",cat:"meer",name:"Krabbe am Strand",svg:
+ sky("#aee2ff")+sun(700,75)+cloud(270,70)+
+ sea("#29b6f6",230)+wave(90,272)+wave(520,262)+
+ sand(310)+
+ R(40,380,140,110,6,"#ffcc80")+R(28,322,48,80,4,"#ffcc80")+R(144,322,48,80,4,"#ffcc80")+
+ R(28,308,14,16,2,"#ffcc80")+R(62,308,14,16,2,"#ffcc80")+R(144,308,14,16,2,"#ffcc80")+R(178,308,14,16,2,"#ffcc80")+
+ P("M90 490 L90 445 Q110 420 130 445 L130 490 Z","#a1887f")+R(166,250,5,60,2,"#8d6e63")+P("M171 254 L205 266 L171 278 Z","#ef5350")+
+ shell(240,560)+starP(120,545,.5)+
+ P("M640 470 L700 470 L692 540 L648 540 Z","#29b6f6")+N("M640 472 Q670 430 700 472")+
+ R(722,420,10,90,3,"#8d6e63")+P("M708 500 L746 500 L740 548 Q727 558 714 548 Z","#ef5350")+
+ P("M300 390 L230 365 L205 400 L220 406 L238 382 L296 405 Z","#e53935")+
+ P("M295 415 L225 410 L210 452 L226 454 L236 428 L292 432 Z","#e53935")+
+ P("M305 438 L245 452 L240 492 L256 492 L258 466 L310 456 Z","#e53935")+
+ P("M500 390 L570 365 L595 400 L580 406 L562 382 L504 405 Z","#e53935")+
+ P("M505 415 L575 410 L590 452 L574 454 L564 428 L508 432 Z","#e53935")+
+ P("M495 438 L555 452 L560 492 L544 492 L542 466 L490 456 Z","#e53935")+
+ P("M300 382 Q258 340 250 300 L268 294 Q282 335 316 366 Z","#ef5350")+P("M500 382 Q542 340 550 300 L532 294 Q518 335 484 366 Z","#ef5350")+
+ C(240,268,42,"#ef5350")+P("M240 268 L206 226 L262 222 Z","#ffe082")+
+ C(560,268,42,"#ef5350")+P("M560 268 L538 222 L594 226 Z","#ffe082")+
+ R(355,300,14,62,7,"#ef5350")+R(431,300,14,62,7,"#ef5350")+
+ E(400,410,120,72,"#ef5350")+E(400,438,72,24,"#e57373")+
+ C(345,385,9,"#e57373")+C(455,385,9,"#e57373")+C(400,370,7,"#e57373")+
+ eye(362,294,18)+eye(438,294,18)+N("M376 428 Q400 446 424 428")},
+
+{id:"uboot",cat:"meer",name:"U-Boot",svg:
+ seabed("#0277bd",530)+
+ weed(50)+coral(700,535,"#f06292")+starP(250,570,.5)+shell(560,576)+
+ P("M640 300 L820 230 L820 410 Z","#fff9c4")+
+ fishS(735,330,"#ffeb3b",-1,.6)+
+ R(400,110,14,72,5,"#90a4ae")+R(400,100,52,16,6,"#90a4ae")+C(452,108,10,"#b3e5fc")+
+ R(330,175,130,100,18,"#ff8f00")+R(352,192,86,38,10,"#b3e5fc")+
+ C(170,320,14,"#90a4ae")+E(152,288,10,30,"#ffb300")+E(152,352,10,30,"#ffb300")+
+ E(400,320,235,95,"#ffb300")+
+ P("M180 345 Q400 420 620 345 Q560 405 400 412 Q240 405 180 345 Z","#ff8f00")+
+ C(300,310,26,"#b3e5fc")+C(390,305,26,"#b3e5fc")+C(480,310,26,"#b3e5fc")+
+ eye(300,312,9)+eye(390,307,9)+eye(480,312,9)+
+ C(632,320,14,"#fff59d")+
+ bub(150,250,10)+bub(132,210,14)+bub(112,160,18)},
+
+/* Vulkane & Natur */
+{id:"seevulkan",cat:"natur",name:"Unterwasservulkan",svg:
+ sky("#01579b")+rays()+
+ PF("M-20 520 Q400 490 820 520 V620 H-20 Z","#a1887f")+
+ weed(40)+weed(700,"#66bb6a")+starP(110,565,.5)+shell(690,575,"#ce93d8")+
+ P("M180 545 L330 300 Q400 280 470 300 L620 545 Z","#6d4c41")+
+ P("M330 300 Q400 280 470 300 Q440 318 400 314 Q360 318 330 300 Z","#ff5722")+
+ P("M380 312 Q360 380 385 430 Q370 480 390 545 L416 545 Q400 480 412 430 Q392 380 410 312 Z","#ff7043")+
+ P("M445 310 Q478 370 466 420 Q488 470 508 530 L530 526 Q510 462 490 416 Q500 360 462 306 Z","#ffab00")+
+ C(260,480,12,"#8d6e63")+C(540,470,10,"#8d6e63")+C(300,420,8,"#8d6e63")+
+ bub(400,250,18)+bub(380,200,13)+bub(420,158,22)+bub(395,108,15)+bub(430,60,20)+bub(360,150,9)+
+ fishS(150,200,"#ffeb3b")+fishS(650,180,"#ba68c8",-1)+fishS(660,250,"#ba68c8",-1,.7)},
+
+{id:"regenbogen",cat:"natur",name:"Regenbogen",svg:
+ sky("#b3e5fc")+sun(720,80)+bird(150,100)+bird(190,80)+
+ band(300,330,"#ef5350")+band(270,300,"#ff9800")+band(240,270,"#ffeb3b")+band(210,240,"#66bb6a")+band(180,210,"#42a5f5")+band(150,180,"#ab47bc")+
+ ground("#9ccc65",470)+
+ C(90,440,48,"#f4fbff")+C(160,420,56,"#f4fbff")+C(225,448,44,"#f4fbff")+
+ C(575,448,44,"#f4fbff")+C(640,420,56,"#f4fbff")+C(710,440,48,"#f4fbff")+
+ E(400,545,90,22,"#4fc3f7")+E(392,528,30,18,"#ffeb3b")+C(418,500,15,"#ffeb3b")+P("M430 500 L448 506 L430 512 Z","#ff9800")+K(422,496,3,3)+
+ flower(120,560)+flower(680,555,"#ce93d8")+flower(250,580,"#ffb74d")+tuft(560,585)+
+ butterfly(560,330,"#ec407a")},
+
+{id:"wasserfall",cat:"natur",name:"Wasserfall",svg:
+ sky("#b3e5fc")+cloud(330,60)+bird(600,60)+
+ P("M-20 620 L-20 120 Q80 100 160 130 L300 140 L300 620 Z","#8d6e63")+
+ P("M500 620 L500 140 L640 120 Q740 100 820 130 L820 620 Z","#8d6e63")+
+ P("M-20 120 Q80 100 160 130 L300 140 L300 168 L160 158 Q80 128 -20 148 Z","#8bc34a")+
+ P("M500 140 L640 120 Q740 100 820 130 L820 156 Q740 126 640 146 L500 168 Z","#8bc34a")+
+ bush(30,110)+bush(640,104)+
+ E(80,260,30,18,"#795548")+E(210,330,26,16,"#795548")+E(620,280,30,18,"#795548")+E(720,380,26,16,"#795548")+
+ P("M290 140 L510 140 L510 470 L290 470 Z","#4fc3f7")+
+ N("M330 165 V440 M370 155 V450 M410 165 V430 M450 155 V450 M480 175 V440")+
+ E(400,505,340,62,"#29b6f6")+
+ C(300,470,26,"#e1f5fe")+C(350,480,30,"#e1f5fe")+C(400,470,34,"#e1f5fe")+C(450,482,30,"#e1f5fe")+C(500,470,26,"#e1f5fe")+
+ fishS(580,515,"#ff7043",1,.6)+
+ PF("M-20 565 Q400 535 820 565 V620 H-20 Z","#8bc34a")+
+ rock(90,565,90)+rock(640,568,110)+flower(250,590)+flower(560,595,"#ffb74d")},
+
+{id:"tornado",cat:"natur",name:"Tornado",svg:
+ sky("#78909c")+
+ C(100,60,70,"#546e7a")+C(230,40,80,"#546e7a")+C(380,60,75,"#607d8b")+C(530,40,85,"#546e7a")+C(690,60,80,"#607d8b")+
+ ground("#9ccc65",470)+N("M-20 520 Q400 495 820 520 M-20 565 Q400 540 820 565")+
+ R(620,385,110,90,4,"#c62828")+P("M608 390 L675 335 L742 390 Z","#5d4037")+R(658,425,34,50,3,"#8d6e63")+
+ R(40,440,160,12,4,"#bcaaa4")+R(40,465,160,12,4,"#bcaaa4")+R(60,425,14,60,4,"#a1887f")+R(170,425,14,60,4,"#a1887f")+
+ [[400,150,170,28,"#b0bec5"],[392,200,142,26,"#90a4ae"],[384,248,116,24,"#b0bec5"],[376,294,92,22,"#90a4ae"],[369,338,70,20,"#b0bec5"],[363,380,50,18,"#90a4ae"],[359,420,32,16,"#b0bec5"]].map(([x,y,rx,ry,c])=>E(x,y,rx,ry,c)+N(`M${x-rx*.6} ${y} Q${x} ${y+ry*.6} ${x+rx*.6} ${y}`)).join("")+
+ C(325,465,22,"#bcaaa4")+C(358,476,28,"#bcaaa4")+C(395,468,22,"#bcaaa4")+
+ leaf(520,200)+leaf(250,260)+leaf(560,330)+apple(230,180)+R(520,250,50,12,3,"#a1887f")+R(210,320,40,12,3,"#a1887f")+
+ P("M560 120 Q585 95 610 120 Z","#ef5350")+N("M585 120 V140")},
+
+/* Flugzeuge & Hubschrauber */
+{id:"loeschflug",cat:"flug",name:"Löschflugzeug",svg:
+ sky("#ffcc80")+cloud(640,80)+
+ C(130,300,30,"#9e9e9e")+C(170,270,38,"#bdbdbd")+C(620,330,30,"#9e9e9e")+C(660,300,34,"#bdbdbd")+
+ ground("#8bc34a",470)+
+ pine(80,540)+pine(170,520,"#388e3c")+pine(260,545)+pine(540,545,"#388e3c")+pine(630,525)+pine(720,545,"#388e3c")+
+ T(150,470,.4,0,flame(0,0),26,0)+T(630,450,.4,0,flame(0,0),26,0)+
+ P("M385 326 Q340 400 300 470 L520 470 Q470 400 425 326 Z","#81d4fa")+
+ drop(330,430,"#4fc3f7")+drop(400,400,"#4fc3f7")+drop(470,440,"#4fc3f7")+drop(380,370,"#4fc3f7")+drop(440,365,"#4fc3f7")+
+ P("M200 205 L150 120 L195 120 L250 200 Z","#e53935")+
+ R(260,300,300,26,13,"#e53935")+N("M330 260 V300 M490 258 V300")+
+ P("M150 230 Q160 200 220 200 L560 195 Q630 195 660 225 Q630 255 560 255 L220 260 Q160 258 150 230 Z","#ffca28")+
+ P("M600 205 Q640 210 650 225 L600 225 Z","#b3e5fc")+
+ C(300,225,12,"#b3e5fc")+C(340,224,12,"#b3e5fc")+C(380,223,12,"#b3e5fc")+C(420,222,12,"#b3e5fc")+
+ R(240,165,340,24,12,"#e53935")+
+ E(320,180,30,18,"#bdbdbd")+E(500,180,30,18,"#bdbdbd")+E(352,180,6,30,"#757575")+E(532,180,6,30,"#757575")},
+
+{id:"ballon",cat:"flug",name:"Heißluftballon",svg:
+ sky("#b3e5fc")+sun(700,80)+cloud(60,130)+cloud(560,220)+bird(200,60)+bird(240,42)+
+ PF("M-20 520 Q200 480 420 515 T820 505 V620 H-20 Z","#8bc34a")+N("M-20 560 Q400 530 820 560")+
+ house(80,540,60,"#ffcc80","#c62828")+house(600,545,55,"#b3e5fc","#5d4037")+pine(720,560)+
+ T(660,170,.35,0,balloon("#42a5f5","#ffffff","#42a5f5"),400,300)+
+ balloon("#e53935","#ffca28","#1e88e5")},
+
+{id:"rakete",cat:"flug",name:"Rakete",svg:
+ sky("#1a237e")+
+ [[60,60],[180,120],[300,40],[520,70],[740,250],[90,250],[700,420],[600,520],[250,380]].map(([x,y])=>starP(x,y,.25,"#fff59d")).join("")+
+ E(650,130,95,22,"#ffcc80")+C(650,130,55,"#ff8a65")+C(630,110,10,"#ffab91")+C(670,150,8,"#ffab91")+
+ P("M555 130 A95 22 0 0 0 745 130 L705 130 A55 12 0 0 1 595 130 Z","#ffcc80")+
+ C(110,560,110,"#e0e0e0")+C(80,520,20,"#bdbdbd")+C(150,500,14,"#bdbdbd")+C(170,580,18,"#bdbdbd")+
+ T(420,300,1,15,
+  C(360,560,30,"#cfd8dc")+C(440,560,30,"#cfd8dc")+C(400,580,34,"#cfd8dc")+
+  P("M340 425 Q330 500 400 560 Q470 500 460 425 Z","#ff7043")+P("M365 425 Q360 485 400 530 Q440 485 435 425 Z","#ffeb3b")+
+  P("M330 320 L262 420 L262 465 L330 420 Z","#e53935")+P("M470 320 L538 420 L538 465 L470 420 Z","#e53935")+
+  P("M400 90 Q470 160 470 300 L470 425 L330 425 L330 300 Q330 160 400 90 Z","#eceff1")+
+  P("M400 90 Q448 128 460 180 L340 180 Q352 128 400 90 Z","#e53935")+
+  R(330,330,140,24,0,"#1e88e5")+
+  C(400,252,40,"#90a4ae")+C(400,252,28,"#4fc3f7")+P("M384 240 Q392 230 404 232","#ffffff")+
+  R(390,390,20,90,8,"#c62828"),400,300)},
+
+{id:"bergrettung",cat:"flug",name:"Bergrettung",svg:
+ sky("#b3e5fc")+sun(720,70)+cloud(70,80)+
+ P("M-20 600 L180 220 L260 300 L360 160 L520 420 L600 330 L820 600 Z","#90a4ae")+
+ P("M180 220 L214 285 L196 280 L180 300 L164 282 L148 290 Z","#ffffff")+P("M360 160 L404 232 L385 224 L370 242 L352 226 L330 234 Z","#ffffff")+P("M600 330 L632 380 L615 376 L600 392 L585 376 L570 382 Z","#ffffff")+
+ pine(60,590)+pine(150,600,"#388e3c")+pine(650,595,"#388e3c")+pine(740,590)+
+ N("M430 290 V420")+
+ C(430,436,16,"#ffccbc")+P("M412 432 Q414 410 430 410 Q446 410 448 432 Z","#e53935")+K(424,438,2.5,2.5)+K(436,438,2.5,2.5)+
+ R(414,452,32,44,10,"#ff7043")+R(414,494,13,30,5,"#1565c0")+R(433,494,13,30,5,"#1565c0")+
+ T(430,200,.75,0,heli("#ffca28","#e53935"),400,300)},
+
+/* Polizei & Feuerwehr */
+{id:"rtw",cat:"blau",name:"Krankenwagen",svg:
+ sky("#aee2ff")+sun(90,70)+cloud(300,70)+
+ R(450,140,340,250,6,"#eceff1")+[480,560,640,720].map(x=>R(x,170,46,40,4,"#b3e5fc")+R(x,240,46,40,4,"#b3e5fc")).join("")+
+ R(580,300,80,90,4,"#b3e5fc")+P("M600 110 h20 v-20 h20 v20 h20 v20 h-20 v20 h-20 v-20 h-20 Z","#e53935")+
+ PF("M-20 390 H820 V620 H-20 Z","#9e9e9e")+R(-20,390,840,22,0,"#bdbdbd")+
+ R(20,530,90,14,4,"#ffffff")+R(220,530,90,14,4,"#ffffff")+R(420,530,90,14,4,"#ffffff")+R(620,530,90,14,4,"#ffffff")+
+ siren(300,206,80)+
+ P("M100 430 L100 252 Q100 232 120 232 L520 232 Q540 232 545 252 L545 290 L620 300 Q680 310 700 360 L710 410 Q710 430 690 430 Z","#fff176")+
+ P("M550 262 L600 270 Q640 278 660 330 L550 330 Z","#b3e5fc")+
+ R(130,258,90,50,8,"#b3e5fc")+R(240,258,90,50,8,"#b3e5fc")+
+ R(100,352,605,24,0,"#e53935")+
+ P("M380 268 h22 v-22 h22 v22 h22 v22 h-22 v22 h-22 v-22 h-22 Z","#e53935")+
+ N("M545 340 V425 M350 250 V425")+R(694,372,16,24,6,"#ffca28")+
+ wheel(210,432,46)+wheel(600,432,46)},
+
+{id:"motorrad",cat:"blau",name:"Polizeimotorrad",svg:
+ sky("#aee2ff")+sun(700,70)+cloud(100,70)+
+ bldg(20,400,130,190,"#ffcc80")+bldg(170,400,110,150,"#b0bec5")+bldg(560,400,120,170,"#a5d6a7")+bldg(690,400,110,210,"#ffab91")+
+ PF("M-20 400 H820 V620 H-20 Z","#9e9e9e")+R(-20,400,840,22,0,"#bdbdbd")+
+ R(40,555,90,14,4,"#ffffff")+R(260,555,90,14,4,"#ffffff")+R(480,555,90,14,4,"#ffffff")+R(700,555,90,14,4,"#ffffff")+
+ R(204,268,8,62,3,"#9e9e9e")+R(192,248,32,24,6,"#2196f3")+N("M182 248 l-14 -10 M234 248 l14 -10 M208 240 v-18")+
+ wheel(230,460,62)+wheel(560,460,62)+
+ R(180,330,90,72,12,"#1e88e5")+R(180,356,90,14,0,"#ffffff")+
+ P("M230 460 L330 384 L346 398 L250 470 Z","#9e9e9e")+
+ R(250,425,150,16,8,"#9e9e9e")+
+ R(330,382,120,62,12,"#90a4ae")+
+ P("M300 352 Q330 322 400 322 L475 322 Q495 342 485 372 L310 384 Z","#cfd8dc")+
+ P("M545 382 L570 460 L554 464 L528 388 Z","#9e9e9e")+
+ P("M470 300 Q560 300 592 382 L562 404 Q522 344 460 342 Z","#1e88e5")+
+ P("M520 300 L545 230 L565 236 L560 302 Z","#b3e5fc")+C(588,372,14,"#fff59d")+
+ P("M372 342 L462 342 L472 392 L432 397 L422 362 L382 362 Z","#1565c0")+R(442,384,38,30,8,"#424242")+
+ P("M360 262 L450 262 Q470 320 452 352 L372 352 Z","#ffca28")+N("M362 300 H458")+
+ P("M440 282 Q500 292 532 302 L527 318 Q490 312 440 307 Z","#ffca28")+
+ C(405,228,42,"#1e88e5")+P("M412 212 Q448 210 448 238 Q448 252 420 252 Z","#b3e5fc")},
+
+{id:"katze",cat:"blau",name:"Katze retten",svg:
+ sky("#aee2ff")+sun(90,80)+cloud(330,60)+
+ ground("#9ccc65",480)+R(-20,470,200,12,4,"#bcaaa4")+R(20,450,12,50,3,"#a1887f")+R(120,450,12,50,3,"#a1887f")+
+ P("M600 600 Q612 450 622 300 L672 300 Q682 450 702 600 Z","#8d6e63")+
+ P("M622 340 Q560 300 460 292 L460 272 Q570 272 628 316 Z","#8d6e63")+
+ C(645,170,110,"#43a047")+C(545,215,78,"#4caf50")+C(740,230,80,"#4caf50")+apple(600,150)+apple(700,200)+
+ P("M498 254 Q530 220 520 200 Q540 230 512 262 Z","#ffb74d")+
+ E(492,260,32,20,"#ffb74d")+C(462,244,20,"#ffb74d")+P("M446 232 L448 212 L462 226 Z","#ffb74d")+P("M466 226 L478 210 L480 230 Z","#ffb74d")+
+ K(456,242,3,4)+K(468,242,3,4)+N("M458 252 Q462 256 466 252")+
+ P("M318 372 L455 292 L465 306 L328 386 Z","#cfd8dc")+N("M345 357 l8 14 M372 341 l8 14 M399 325 l8 14 M426 309 l8 14")+
+ T(260,430,.55,0,truck(),410,355)+
+ flower(560,560)+flower(740,580,"#ce93d8")+tuft(420,585)},
+
+{id:"loeschboot",cat:"blau",name:"Feuerwehrboot",svg:
+ sky("#aee2ff")+sun(700,70)+cloud(90,70)+
+ bldg(-10,400,110,140,"#ffcc80")+bldg(110,400,90,110,"#b0bec5")+bldg(620,400,90,120,"#a5d6a7")+bldg(720,400,100,160,"#ffab91")+
+ sea("#29b6f6",400)+wave(60,520)+wave(250,560)+wave(680,520)+
+ P("M330 255 Q250 120 140 200 Q250 150 320 266 Z","#81d4fa")+P("M520 255 Q600 110 720 190 Q610 140 530 266 Z","#81d4fa")+
+ drop(140,230,"#4fc3f7")+drop(170,250,"#4fc3f7")+drop(720,220,"#4fc3f7")+drop(690,245,"#4fc3f7")+
+ R(318,250,18,60,4,"#9e9e9e")+R(514,250,18,60,4,"#9e9e9e")+
+ siren(390,272,70)+
+ R(320,296,210,88,12,"#ef5350")+R(342,314,70,44,8,"#b3e5fc")+R(436,314,70,44,8,"#b3e5fc")+
+ P("M180 380 L660 380 Q640 452 580 468 L250 468 Q210 448 180 380 Z","#e53935")+
+ R(205,396,430,16,4,"#ffeb3b")+
+ C(270,436,20,"#ff7043")+C(270,436,9,"#ffffff")+
+ P("M660 410 Q720 430 760 416 Q720 452 660 446 Z","#e1f5fe")},
+
+/* Baustelle & Fahrzeuge */
+{id:"bagger",cat:"bau",name:"Bagger",svg:
+ sky("#aee2ff")+sun(90,80)+cloud(420,70)+
+ PF("M-20 470 Q400 440 820 470 V620 H-20 Z","#a1887f")+
+ P("M560 520 Q620 400 720 410 Q800 420 820 520 Z","#8d6e63")+C(650,470,10,"#6d4c41")+C(720,450,12,"#6d4c41")+C(760,490,9,"#6d4c41")+
+ P("M60 560 L82 490 L104 560 Z","#ff7043")+R(66,530,32,10,2,"#ffffff")+P("M500 580 L520 515 L540 580 Z","#ff7043")+R(506,550,28,10,2,"#ffffff")+
+ R(160,322,64,90,12,"#ff8f00")+R(400,250,16,56,4,"#616161")+
+ R(200,300,260,120,14,"#ffb300")+R(220,220,120,110,12,"#ffb300")+R(236,236,88,68,8,"#b3e5fc")+
+ P("M440 335 L600 170 L640 200 L470 365 Z","#ffb300")+N("M470 330 L590 205")+
+ P("M600 170 L682 330 L646 342 L574 192 Z","#ffb300")+
+ P("M640 330 L722 318 L732 380 Q692 420 642 390 Z","#ff8f00")+
+ P("M650 395 L656 418 L668 400 Z","#9e9e9e")+P("M676 402 L684 424 L694 404 Z","#9e9e9e")+P("M702 398 L712 418 L718 394 Z","#9e9e9e")+
+ R(170,420,320,72,36,"#424242")+C(210,456,24,"#9e9e9e")+C(280,456,20,"#9e9e9e")+C(350,456,20,"#9e9e9e")+C(450,456,24,"#9e9e9e")},
+
+{id:"zug",cat:"bau",name:"Dampflok",svg:
+ sky("#aee2ff")+sun(720,70)+cloud(80,90)+
+ PF("M-20 430 Q300 380 820 420 V620 H-20 Z","#9ccc65")+
+ [0,1,2,3,4,5,6,7,8,9,10,11,12,13].map(i=>R(-10+i*62,478,34,18,3,"#8d6e63")).join("")+R(-20,470,840,12,4,"#9e9e9e")+
+ C(600,160,22,"#eceff1")+C(565,120,30,"#eceff1")+C(520,85,38,"#eceff1")+
+ R(70,322,140,100,10,"#4caf50")+R(90,340,40,40,6,"#b3e5fc")+R(150,340,40,40,6,"#b3e5fc")+C(110,445,22,"#424242")+C(180,445,22,"#424242")+
+ R(210,395,30,12,4,"#616161")+
+ R(240,322,140,100,10,"#ffca28")+R(260,340,40,40,6,"#b3e5fc")+R(320,340,40,40,6,"#b3e5fc")+C(280,445,22,"#424242")+C(350,445,22,"#424242")+
+ R(380,395,30,12,4,"#616161")+
+ R(410,240,110,170,10,"#1e88e5")+R(400,228,130,20,8,"#1565c0")+R(430,265,70,60,8,"#b3e5fc")+
+ R(510,310,190,100,45,"#e53935")+R(620,240,34,78,6,"#424242")+R(610,228,54,18,6,"#424242")+C(570,306,22,"#ffca28")+
+ C(696,360,26,"#ffca28")+P("M690 410 L742 470 L690 470 Z","#ffca28")+
+ C(460,440,34,"#424242")+C(460,440,13,"#ffca28")+C(570,445,30,"#424242")+C(570,445,12,"#ffca28")+C(650,445,30,"#424242")+C(650,445,12,"#ffca28")+
+ N("M460 440 L650 445")},
+
+{id:"muell",cat:"bau",name:"Müllauto",svg:
+ sky("#aee2ff")+sun(90,70)+cloud(400,60)+
+ house(40,390,90,"#ffcc80","#c62828")+house(200,390,80,"#b3e5fc","#5d4037")+house(560,390,90,"#c5e1a5","#c62828")+
+ PF("M-20 390 H820 V620 H-20 Z","#9e9e9e")+R(-20,390,840,22,0,"#bdbdbd")+
+ R(40,540,90,14,4,"#ffffff")+R(260,540,90,14,4,"#ffffff")+R(480,540,90,14,4,"#ffffff")+
+ P("M60 300 L120 270 L120 430 L70 430 Z","#f57c00")+
+ P("M120 430 L120 262 Q120 242 140 242 L470 242 Q490 242 490 262 L490 430 Z","#ff9800")+
+ N("M180 250 V420 M240 250 V420 M300 250 V420 M360 250 V420 M420 250 V420")+
+ R(540,246,34,20,8,"#ffca28")+
+ P("M490 430 L490 282 Q490 266 506 266 L590 266 Q630 266 650 306 L675 360 Q685 375 685 395 L685 420 Q685 430 670 430 Z","#ff9800")+
+ P("M508 282 L585 282 Q615 282 630 314 L648 355 L508 355 Z","#b3e5fc")+
+ R(120,398,565,18,0,"#fff59d")+R(670,372,16,22,6,"#fff59d")+
+ wheel(190,432,46)+wheel(400,432,46)+wheel(590,432,46)+
+ R(705,402,54,76,6,"#43a047")+R(700,392,64,14,5,"#2e7d32")},
+
+/* Bauernhof */
+{id:"pferd",cat:"hof",name:"Pferd",svg:
+ sky("#aee2ff")+sun(110,80)+cloud(500,70)+
+ ground("#9ccc65",440)+
+ R(-20,400,840,14,4,"#bcaaa4")+R(-20,436,840,14,4,"#bcaaa4")+R(40,380,22,90,5,"#a1887f")+R(740,380,22,90,5,"#a1887f")+
+ PF("M-20 480 Q400 455 820 480 V620 H-20 Z","#8bc34a")+
+ flower(90,560)+flower(720,570,"#ce93d8")+tuft(400,590)+
+ P("M250 320 Q190 340 200 440 Q215 400 240 380 Q230 420 250 450 Q262 380 266 340 Z","#5d4037")+
+ R(270,380,36,140,14,"#8d6e63")+R(500,380,36,140,14,"#8d6e63")+
+ E(400,350,160,75,"#a1887f")+C(330,330,12,"#bcaaa4")+C(360,360,9,"#bcaaa4")+
+ R(300,385,38,140,14,"#a1887f")+R(530,385,38,140,14,"#a1887f")+
+ R(300,505,38,22,6,"#5d4037")+R(530,505,38,22,6,"#5d4037")+R(270,500,36,22,6,"#4e342e")+R(500,500,36,22,6,"#4e342e")+
+ P("M500 320 Q510 230 560 170 L620 200 Q580 260 575 340 Z","#a1887f")+
+ P("M560 165 Q520 200 505 260 Q495 300 505 330 Q522 280 532 260 Q545 228 578 196 Z","#5d4037")+
+ P("M575 160 L582 118 L602 152 Z","#a1887f")+
+ P("M560 160 Q600 130 640 160 L700 240 Q715 270 690 285 Q660 295 640 270 L580 210 Z","#a1887f")+
+ P("M612 168 L628 160 L668 232 L652 240 Z","#fff3e0")+
+ E(690,268,28,22,"#d7ccc8")+K(700,262,4,5)+
+ P("M572 156 Q590 140 610 150 Q596 162 584 178 Z","#5d4037")+
+ eye(612,200,11)},
+
+{id:"schaf",cat:"hof",name:"Schaf",svg:
+ sky("#aee2ff")+sun(700,80)+cloud(120,80)+cloud(420,110)+
+ ground("#9ccc65",440)+
+ R(-20,420,300,12,4,"#bcaaa4")+R(-20,448,300,12,4,"#bcaaa4")+R(30,400,20,80,5,"#a1887f")+R(200,400,20,80,5,"#a1887f")+
+ flower(90,560)+flower(720,560,"#ffb74d")+tuft(620,590)+tuft(300,590)+
+ T(400,320,1,0,sheep(),420,360)+
+ T(160,470,.42,0,sheep("#fff59d"),420,360)+
+ butterfly(650,220,"#ec407a")},
+
+{id:"maehdrescher",cat:"hof",name:"Mähdrescher",svg:
+ sky("#aee2ff")+sun(90,80)+cloud(560,70)+bird(300,90)+bird(340,70)+
+ PF("M-20 400 Q400 370 820 400 V620 H-20 Z","#ffd54f")+
+ N("M600 420 v-20 M640 430 v-22 M680 425 v-20 M720 432 v-22 M760 426 v-20 M620 470 v-22 M700 475 v-22 M770 480 v-20")+
+ PF("M-20 470 Q250 450 520 470 L520 620 H-20 Z","#fff176")+
+ P("M260 222 L120 162 L112 178 L255 240 Z","#388e3c")+
+ R(260,190,150,50,10,"#388e3c")+
+ R(220,230,330,170,16,"#43a047")+
+ R(430,160,110,90,12,"#43a047")+R(445,172,80,60,8,"#b3e5fc")+
+ R(540,340,170,60,10,"#ffca28")+C(625,330,46,"#ffb300")+N("M625 284 V376 M579 330 H671 M592 297 L658 363 M592 363 L658 297")+
+ C(310,410,62,"#424242")+C(310,410,30,"#ffca28")+C(500,425,38,"#424242")+C(500,425,17,"#ffca28")+
+ C(150,380,16,"#ffe082")+C(120,370,12,"#ffe082")}
+];
+scenes.push(...scenes2);
+
 /* ---------- SVG -> Bild ---------- */
 const DEFS=`<defs><filter id="cel" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="-9" dy="-10" result="o1"/><feComposite in="SourceAlpha" in2="o1" operator="out" result="e1"/><feFlood flood-color="#20173a" flood-opacity=".22"/><feComposite in2="e1" operator="in" result="sh"/><feOffset in="SourceAlpha" dx="6" dy="7" result="o2"/><feComposite in="SourceAlpha" in2="o2" operator="out" result="e2"/><feFlood flood-color="#ffffff" flood-opacity=".32"/><feComposite in2="e2" operator="in" result="hi"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge></filter><pattern id="dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="2.4" fill="#ffffff" fill-opacity=".28"/></pattern></defs>`;
 function doc(s,mode,w,h){
@@ -930,6 +1411,21 @@ clearBtn.addEventListener("pointerdown",e=>{
   },900);
 });
 ["pointerup","pointerleave","pointercancel"].forEach(t=>clearBtn.addEventListener(t,()=>{clearTimeout(holdT);clearBtn.classList.remove("holding");}));
+
+
+/* Alle Bilder zurücksetzen: 2 Sekunden halten */
+const resetAll=$("resetAll"),toast=$("toast");let raT=null,toastT=null;
+resetAll.addEventListener("pointerdown",e=>{
+  e.preventDefault();resetAll.classList.add("holding");
+  raT=setTimeout(async()=>{
+    resetAll.classList.remove("holding");
+    state.forEach(st=>{st.p=null;st.has=false;st.done=false;});
+    scenes.forEach((s,i)=>{thumbSrc[i]=null;drawThumb(i,null);});
+    await idb("readwrite",s=>s.clear());
+    toast.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{toast.hidden=true;},2200);
+  },2000);
+});
+["pointerup","pointerleave","pointercancel"].forEach(t=>resetAll.addEventListener(t,()=>{clearTimeout(raT);resetAll.classList.remove("holding");}));
 
 /* ---------- Vollbild ---------- */
 const fsHelp=$("fsHelp");
@@ -1072,7 +1568,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!paint.hi
 (function(){
   var sa=window.navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||(window.matchMedia&&matchMedia("(display-mode: fullscreen)").matches);
   if(sa)document.documentElement.classList.add("standalone");
-  if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+  if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(r){r.update();}).catch(function(){});});}
 })();
 </script>
 </body>
